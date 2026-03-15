@@ -1,0 +1,246 @@
+.vsm-canvas-wrapper {
+  flex: 1;
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* React Flow overrides */
+.react-flow__controls {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+
+.react-flow__controls-button {
+  background: #0d1225 !important;
+  border-color: #1e2d4d !important;
+  color: #8aadd8 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #1e2d4d !important;
+}
+
+.react-flow__edge-path {
+  stroke: #2d4a7a;
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #4a9eff;
+}
+
+/* Stats panel */
+.flow-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(13, 18, 37, 0.85);
+  border: 1px solid #1e2d4d;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  backdrop-filter: blur(4px);
+}
+
+.stat-label {
+  color: #3a5070;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  color: #80a8e8;
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+/* Edit modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fade-in 0.15s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-box {
+  background: #0f1628;
+  border: 1px solid #1e2d4d;
+  border-radius: 14px;
+  width: 340px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  animation: scale-in 0.2s cubic-bezier(0.22, 0.68, 0, 1.2);
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #1e2d4d;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e8edf5;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.modal-body::-webkit-scrollbar { width: 4px; }
+.modal-body::-webkit-scrollbar-thumb { background: #2d4a7a; border-radius: 2px; }
+
+.modal-body .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-body .form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a7aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal-body .form-group input {
+  background: #0a1520;
+  border: 1px solid #1e2d4d;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  color: #c0cce8;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.modal-body .form-group input:focus {
+  border-color: #2d5aaa;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid #1e2d4d;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-btn.cancel {
+  background: #0d1225;
+  border: 1px solid #1e2d4d;
+  color: #5a7aaa;
+}
+
+.modal-btn.cancel:hover {
+  background: #151e35;
+  color: #8aadd8;
+}
+
+.modal-btn.save {
+  background: #1e3a8a;
+  border: 1px solid #2d5aaa;
+  color: #a0c0ff;
+}
+
+.modal-btn.save:hover {
+  background: #2d4a9a;
+  color: #c0d8ff;
+}
+
+/* ── Lead Time Summary Bar ───────────────────────────────────────────────── */
+
+.lead-time-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 10px 20px;
+  background: rgba(13, 18, 37, 0.92);
+  border-top: 1px solid #1e2d4d;
+  font-family: 'Inter', sans-serif;
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+
+.lt-metric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+}
+
+.lt-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3a5070;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.lt-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #80a8e8;
+  font-variant-numeric: tabular-nums;
+}
+
+.lt-va {
+  color: #80c090;
+}
+
+.lt-low {
+  color: #ff6b6b;
+}
+
+.lt-mid {
+  color: #ffd080;
+}
+
+.lt-high {
+  color: #80e0a0;
+}
+
+.lt-divider {
+  width: 1px;
+  height: 24px;
+  background: #1e2d4d;
+}

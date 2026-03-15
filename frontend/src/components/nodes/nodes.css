@@ -1,0 +1,129 @@
+/* Base VSM node */
+.vsm-node {
+  background: #16213e;
+  border: 1.5px solid #2d4a7a;
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-width: 140px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #e0e6f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.vsm-node.selected {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.3), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.node-label {
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  margin-top: 4px;
+  color: #e8edf5;
+}
+
+.node-icon {
+  text-align: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.node-props {
+  margin-top: 8px;
+  border-top: 1px solid #2d4a7a;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.prop-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #8899bb;
+}
+
+.prop-row span:last-child {
+  color: #c0cce8;
+  font-weight: 500;
+}
+
+/* Supplier */
+.supplier-node {
+  border-color: #3d7a6b;
+  background: linear-gradient(135deg, #132c2a 0%, #16213e 100%);
+}
+
+.supplier-node .node-icon { color: #4db89a; }
+
+/* Process */
+.process-node {
+  border-color: #2d4a7a;
+  background: linear-gradient(135deg, #141e35 0%, #1a2540 100%);
+  min-width: 160px;
+}
+
+/* Bottleneck highlight */
+.process-node.bottleneck {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.25), 0 4px 20px rgba(255, 107, 107, 0.2);
+  animation: bottleneck-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes bottleneck-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.25), 0 4px 20px rgba(255, 107, 107, 0.15); }
+  50%       { box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.4),  0 4px 24px rgba(255, 107, 107, 0.35); }
+}
+
+.bottleneck-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff6b6b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+/* Inventory */
+.inventory-node {
+  border-color: #7a5c2d;
+  background: linear-gradient(135deg, #2a2214 0%, #1e1a10 100%);
+  min-width: 100px;
+  text-align: center;
+}
+
+.inventory-icon {
+  font-size: 22px;
+  color: #d4a857;
+  text-align: center;
+  line-height: 1;
+}
+
+/* Customer */
+.customer-node {
+  border-color: #5a3d7a;
+  background: linear-gradient(135deg, #1e1530 0%, #1a1228 100%);
+}
+
+.customer-node .node-icon { color: #a87fd4; }
+
+/* InfoFlow */
+.infoflow-node {
+  border-color: #2d6a7a;
+  background: linear-gradient(135deg, #0e2530 0%, #0a1e28 100%);
+  border-style: dashed;
+  min-width: 120px;
+}
+
+.infoflow-node .node-icon { color: #4db8d4; }
