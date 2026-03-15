@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VSM-TOC Standalone</title>
+<style>
+/* ── Reset & Base ── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body,#root{height:100%;width:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#c9d1d9}
+button{cursor:pointer;font-family:inherit}
+input,textarea,select{font-family:inherit}
+
+/* ── Layout ── */
+.app{display:flex;flex-direction:column;height:100%}
+.toolbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;flex-wrap:wrap}
+.toolbar .brand{font-weight:700;font-size:15px;color:#58a6ff;margin-right:8px;white-space:nowrap}
+.toolbar button{padding:4px 10px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:12px;transition:background .15s}
+.toolbar button:hover{background:#30363d}
+.toolbar .node-btn{display:flex;align-items:center;gap:4px}
+.toolbar .sep{width:1px;height:24px;background:#30363d;margin:0 4px}
+.toolbar select{padding:4px 8px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:12px}
+.toolbar input[type=text]{padding:4px 8px;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#c9d1d9;font-size:12px;width:140px}
+
+/* ── Main area ── */
+.main-area{display:flex;flex:1;overflow:hidden;position:relative}
+.canvas-wrap{flex:1;position:relative;background:#0d1117}
+
+/* ── Canvas (SVG) ── */
+.canvas-svg{width:100%;height:100%;display:block}
+.canvas-svg text{font-family:'Segoe UI',system-ui,sans-serif}
+
+/* ── Node styles ── */
+.vsm-node{cursor:grab;user-select:none}
+.vsm-node:active{cursor:grabbing}
+.vsm-node rect{rx:8;ry:8}
+.vsm-node.selected rect{stroke-width:3 !important}
+.vsm-node.bottleneck rect{stroke:#ff6b6b !important;stroke-width:3}
+
+/* ── Edge ── */
+.edge-line{stroke:#4a5568;stroke-width:2;fill:none;cursor:pointer}
+.edge-line:hover{stroke:#718096;stroke-width:3}
+.edge-line.selected{stroke:#58a6ff;stroke-width:3}
+.edge-line.info-edge{stroke-dasharray:6 4;stroke:#2d6a7a}
+
+/* ── Port dots ── */
+.port{fill:#58a6ff;cursor:crosshair;r:5;opacity:0.6;transition:opacity .15s}
+.port:hover{opacity:1;r:7}
+
+/* ── Lead Time Bar ── */
+.lead-time-bar{display:flex;align-items:center;gap:20px;padding:6px 16px;background:#161b22;border-top:1px solid #30363d;font-size:13px;flex-shrink:0}
+.lead-time-bar .metric{display:flex;align-items:center;gap:6px}
+.lead-time-bar .metric-label{color:#8b949e}
+.lead-time-bar .metric-value{font-weight:600}
+.eff-good{color:#3fb950}.eff-mid{color:#d29922}.eff-bad{color:#f85149}
+
+/* ── Node Edit Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;width:340px;max-width:90vw}
+.modal h3{margin-bottom:12px;color:#58a6ff;font-size:15px}
+.modal label{display:block;margin-bottom:10px;font-size:13px;color:#8b949e}
+.modal label span{display:block;margin-bottom:3px}
+.modal input[type=number],.modal input[type=text]{width:100%;padding:6px 8px;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#c9d1d9;font-size:13px}
+.modal .modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.modal .btn-primary{background:#238636;border:1px solid #2ea043;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px}
+.modal .btn-primary:hover{background:#2ea043}
+.modal .btn-cancel{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:6px 14px;border-radius:6px;font-size:13px}
+
+/* ── TOC Panel ── */
+.toc-panel{width:420px;background:#161b22;border-left:1px solid #30363d;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.toc-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #30363d}
+.toc-header h3{font-size:14px;color:#58a6ff}
+.toc-close{background:none;border:none;color:#8b949e;font-size:18px;padding:2px 6px;border-radius:4px}
+.toc-close:hover{color:#c9d1d9;background:#21262d}
+.toc-tabs{display:flex;border-bottom:1px solid #30363d}
+.toc-tabs button{flex:1;padding:8px;background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-size:13px;font-weight:600;transition:all .15s}
+.toc-tabs button.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.toc-tabs button:hover{color:#c9d1d9}
+.toc-body{flex:1;overflow-y:auto;padding:14px}
+
+/* ── EC Form ── */
+.ec-form label{display:block;margin-bottom:10px;font-size:13px;color:#8b949e}
+.ec-form label span{display:block;margin-bottom:3px;font-weight:600;color:#c9d1d9}
+.ec-form input,.ec-form textarea{width:100%;padding:6px 8px;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#c9d1d9;font-size:13px;resize:vertical}
+.ec-form textarea{min-height:48px}
+.ec-visual{margin-top:14px;padding:12px;background:#0d1117;border-radius:8px;border:1px solid #30363d;font-size:12px;line-height:1.6}
+.ec-visual .ec-row{display:flex;align-items:center;gap:8px;margin:4px 0}
+.ec-visual .ec-box{padding:4px 8px;border-radius:4px;border:1px solid #30363d;background:#21262d;flex:1;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ec-visual .ec-arrow{color:#58a6ff;font-weight:700;flex-shrink:0}
+.ec-visual .ec-goal{background:#1a3a2a;border-color:#238636;color:#3fb950}
+.ec-visual .ec-conflict{color:#f85149;font-weight:700;font-size:14px;text-align:center;margin:6px 0}
+
+/* ── CRT / FRT Tree Canvas ── */
+.tree-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tree-toolbar select{padding:3px 6px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;font-size:12px}
+.tree-toolbar button{padding:3px 8px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;font-size:12px}
+.tree-toolbar button:hover{background:#30363d}
+.tree-toolbar button.neg-active{background:#4a1a1a;border-color:#f85149;color:#f85149}
+.tree-canvas{background:#0d1117;border:1px solid #30363d;border-radius:8px;min-height:300px;position:relative;overflow:auto}
+.tree-canvas svg{display:block}
+.tree-node{cursor:grab;user-select:none}
+.tree-node:active{cursor:grabbing}
+.tree-node rect{rx:6;ry:6}
+.tree-edge{stroke-width:2;fill:none}
+.tree-edge.neg{stroke:#f85149;stroke-dasharray:6 3}
+.tree-hint{font-size:11px;color:#484f58;margin-top:8px;line-height:1.5}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#0d1117}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#484f58}
+
+/* ── Hidden file input ── */
+.hidden{display:none}
+
+/* ── Context menu ── */
+.ctx-menu{position:fixed;background:#21262d;border:1px solid #30363d;border-radius:8px;padding:4px 0;z-index:999;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.ctx-menu button{display:block;width:100%;text-align:left;padding:6px 14px;background:none;border:none;color:#c9d1d9;font-size:13px}
+.ctx-menu button:hover{background:#30363d}
+.ctx-menu .danger{color:#f85149}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  VSM-TOC Standalone — Pure Vanilla JS, No Dependencies
+// ═══════════════════════════════════════════════════════════════════
+
+(function() {
+"use strict";
+
+// ── Storage helpers ──
+const STORAGE_KEY = "vsm_projects";
+const CURRENT_KEY = "vsm_current_project";
+
+function loadProjects() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveProjects(p) { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
+function getCurrentId() { return localStorage.getItem(CURRENT_KEY) || null; }
+function setCurrentId(id) { localStorage.setItem(CURRENT_KEY, id); }
+
+function newProject(name) {
+  return {
+    id: "p_" + Date.now() + "_" + Math.random().toString(36).slice(2,6),
+    name: name || "Untitled",
+    nodes: [],
+    edges: [],
+    toc: {} // keyed by nodeId: { ec, crt: {nodes,edges}, frt: {nodes,edges} }
+  };
+}
+
+// ── Geometry ──
+const NODE_W = 140, NODE_H = 70;
+const PROC_W = 160, PROC_H = 100;
+const NODE_COLORS = {
+  supplier:  { bg:"#122a22", border:"#3d7a6b", text:"#7ac4b0" },
+  process:   { bg:"#142040", border:"#2d4a7a", text:"#7aaacf" },
+  inventory: { bg:"#2a2010", border:"#7a5c2d", text:"#c4a060" },
+  customer:  { bg:"#201430", border:"#5a3d7a", text:"#b080d0" },
+  infoflow:  { bg:"#102a30", border:"#2d6a7a", text:"#70b8c8" },
+};
+const NODE_ICONS = { supplier:"🏭", process:"⚙️", inventory:"▽", customer:"👤", infoflow:"📋" };
+
+// ── App State ──
+let state = {
+  projects: loadProjects(),
+  currentId: getCurrentId(),
+  // Canvas
+  nodes: [],
+  edges: [],
+  pan: { x: 0, y: 0 },
+  zoom: 1,
+  // Selection
+  selectedNode: null,
+  selectedEdge: null,
+  // Dragging
+  dragging: null, // { nodeId, offsetX, offsetY }
+  // Connecting
+  connecting: null, // { sourceId, startX, startY, curX, curY }
+  // Edit modal
+  editNode: null,
+  // TOC
+  showTOC: false,
+  tocNodeId: null,
+  tocTab: "ec",
+  // Context menu
+  ctxMenu: null,
+  // Node counter
+  nodeCounter: 0,
+  // CRT/FRT drag
+  treeDragging: null,
+  treeConnecting: null,
+  frtNegMode: false,
+  // CRT/FRT selected
+  treeSelectedNode: null,
+  treeSelectedEdge: null,
+};
+
+function currentProject() {
+  if (!state.currentId) return null;
+  return state.projects[state.currentId] || null;
+}
+
+function persist() {
+  const p = currentProject();
+  if (p) {
+    p.nodes = state.nodes;
+    p.edges = state.edges;
+  }
+  saveProjects(state.projects);
+  setCurrentId(state.currentId);
+}
+
+function loadProject(id) {
+  state.currentId = id;
+  const p = state.projects[id];
+  if (p) {
+    state.nodes = p.nodes || [];
+    state.edges = p.edges || [];
+    // fix counter
+    let max = 0;
+    state.nodes.forEach(n => {
+      const m = parseInt(n.id.replace(/\D/g,"")) || 0;
+      if (m > max) max = m;
+    });
+    state.nodeCounter = max;
+  } else {
+    state.nodes = [];
+    state.edges = [];
+    state.nodeCounter = 0;
+  }
+  state.selectedNode = null;
+  state.selectedEdge = null;
+  state.showTOC = false;
+  state.tocNodeId = null;
+  state.pan = { x: 0, y: 0 };
+  state.zoom = 1;
+  persist();
+  render();
+}
+
+// ── Init ──
+function init() {
+  const ids = Object.keys(state.projects);
+  if (ids.length === 0) {
+    const p = newProject("My VSM");
+    state.projects[p.id] = p;
+    state.currentId = p.id;
+  } else if (!state.currentId || !state.projects[state.currentId]) {
+    state.currentId = ids[0];
+  }
+  loadProject(state.currentId);
+}
+
+// ── Bottleneck Detection ──
+function detectBottleneck() {
+  let maxCT = -1, bnId = null;
+  state.nodes.forEach(n => {
+    if (n.type === "process" && n.properties) {
+      if (n.properties.cycleTime > maxCT) {
+        maxCT = n.properties.cycleTime;
+        bnId = n.id;
+      }
+    }
+  });
+  return bnId;
+}
+
+// ── Lead Time Metrics ──
+function calcLeadTime() {
+  let va = 0, wip = 0;
+  state.nodes.forEach(n => {
+    if (!n.properties) return;
+    if (n.type === "process") {
+      va += (n.properties.cycleTime || 0);
+      wip += (n.properties.wip || 0);
+    } else if (n.type === "inventory") {
+      wip += (n.properties.wip || 0);
+    }
+  });
+  const total = va + wip;
+  const eff = total > 0 ? (va / total * 100) : 0;
+  return { total, va, eff };
+}
+
+// ── CRT Core Constraint Detection ──
+function detectCoreConstraints(treeNodes, treeEdges) {
+  const symptoms = new Set(treeNodes.filter(n => n.ttype === "symptom").map(n => n.id));
+  if (symptoms.size < 2) return new Set();
+  // forward adjacency: source -> targets
+  const fwd = {};
+  treeEdges.forEach(e => {
+    if (!fwd[e.source]) fwd[e.source] = [];
+    fwd[e.source].push(e.target);
+  });
+  // for each node, find reachable symptoms
+  const cache = {};
+  function reachable(id, visited) {
+    if (cache[id]) return cache[id];
+    if (visited.has(id)) return new Set();
+    visited.add(id);
+    const result = new Set();
+    if (symptoms.has(id)) result.add(id);
+    (fwd[id] || []).forEach(t => {
+      reachable(t, visited).forEach(s => result.add(s));
+    });
+    cache[id] = result;
+    return result;
+  }
+  const cores = new Set();
+  treeNodes.forEach(n => {
+    if (symptoms.has(n.id)) return;
+    const r = reachable(n.id, new Set());
+    if (r.size >= 2) cores.add(n.id);
+  });
+  return cores;
+}
+
+// ═══════════════════ RENDER ═══════════════════
+
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k,v]) => {
+    if (k === "style" && typeof v === "object") Object.assign(e.style, v);
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === "className") e.className = v;
+    else if (k === "innerHTML") e.innerHTML = v;
+    else if (k === "value") e.value = v;
+    else if (k === "checked") e.checked = v;
+    else if (k === "selected") e.selected = v;
+    else if (k === "disabled") e.disabled = v;
+    else e.setAttribute(k, v);
+  });
+  children.flat(Infinity).forEach(c => {
+    if (c == null) return;
+    if (typeof c === "string" || typeof c === "number") e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
+}
+
+function svgEl(tag, attrs, ...children) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  if (attrs) Object.entries(attrs).forEach(([k,v]) => {
+    if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  });
+  children.flat(Infinity).forEach(c => {
+    if (c == null) return;
+    if (typeof c === "string" || typeof c === "number") e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
+}
+
+// ── Node dimensions ──
+function nodeW(n) { return n.type === "process" ? PROC_W : NODE_W; }
+function nodeH(n) { return n.type === "process" ? PROC_H : NODE_H; }
+
+// ── Port positions (in node local coords) ──
+function ports(n) {
+  const w = nodeW(n), h = nodeH(n);
+  const result = [];
+  if (n.type === "supplier") {
+    result.push({ side:"right", x:w, y:h/2 });
+  } else if (n.type === "customer") {
+    result.push({ side:"left", x:0, y:h/2 });
+  } else if (n.type === "infoflow") {
+    result.push({ side:"top", x:w/2, y:0 });
+    result.push({ side:"bottom", x:w/2, y:h });
+    result.push({ side:"right", x:w, y:h/2 });
+  } else {
+    result.push({ side:"left", x:0, y:h/2 });
+    result.push({ side:"right", x:w, y:h/2 });
+  }
+  return result;
+}
+
+// ── Closest port pair for edge ──
+function closestPorts(srcNode, tgtNode) {
+  const sp = ports(srcNode), tp = ports(tgtNode);
+  let best = Infinity, bp = null;
+  sp.forEach(s => {
+    const sx = srcNode.x + s.x, sy = srcNode.y + s.y;
+    tp.forEach(t => {
+      const tx = tgtNode.x + t.x, ty = tgtNode.y + t.y;
+      const d = (sx-tx)**2 + (sy-ty)**2;
+      if (d < best) { best = d; bp = { sx,sy,tx,ty }; }
+    });
+  });
+  return bp || { sx:srcNode.x, sy:srcNode.y, tx:tgtNode.x, ty:tgtNode.y };
+}
+
+// ── Render SVG Canvas ──
+function renderCanvas(container) {
+  const bnId = detectBottleneck();
+
+  const svg = svgEl("svg", { class:"canvas-svg" });
+  // defs for arrowhead
+  const defs = svgEl("defs");
+  const marker = svgEl("marker", { id:"arrow", markerWidth:"10", markerHeight:"7", refX:"10", refY:"3.5", orient:"auto" });
+  marker.appendChild(svgEl("polygon", { points:"0 0, 10 3.5, 0 7", fill:"#4a5568" }));
+  defs.appendChild(marker);
+  const markerSel = svgEl("marker", { id:"arrow-sel", markerWidth:"10", markerHeight:"7", refX:"10", refY:"3.5", orient:"auto" });
+  markerSel.appendChild(svgEl("polygon", { points:"0 0, 10 3.5, 0 7", fill:"#58a6ff" }));
+  defs.appendChild(markerSel);
+  const markerInfo = svgEl("marker", { id:"arrow-info", markerWidth:"10", markerHeight:"7", refX:"10", refY:"3.5", orient:"auto" });
+  markerInfo.appendChild(svgEl("polygon", { points:"0 0, 10 3.5, 0 7", fill:"#2d6a7a" }));
+  defs.appendChild(markerInfo);
+  svg.appendChild(defs);
+
+  const g = svgEl("g", { transform:`translate(${state.pan.x},${state.pan.y}) scale(${state.zoom})` });
+
+  // Grid
+  for (let x = -2000; x < 4000; x += 40) {
+    for (let y = -2000; y < 4000; y += 40) {
+      g.appendChild(svgEl("circle", { cx:String(x), cy:String(y), r:"1", fill:"#1e2d4d", opacity:"0.4" }));
+    }
+  }
+
+  // Edges
+  state.edges.forEach(edge => {
+    const src = state.nodes.find(n => n.id === edge.source);
+    const tgt = state.nodes.find(n => n.id === edge.target);
+    if (!src || !tgt) return;
+    const { sx,sy,tx,ty } = closestPorts(src, tgt);
+    const isInfo = src.type === "infoflow" || tgt.type === "infoflow";
+    const isSel = state.selectedEdge === edge.id;
+    const mx = (sx+tx)/2, my = (sy+ty)/2;
+    const dx = tx - sx, dy = ty - sy;
+    // smoothstep-like curve
+    const cx1 = sx + dx*0.5, cy1 = sy;
+    const cx2 = sx + dx*0.5, cy2 = ty;
+    const path = `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`;
+    const cls = "edge-line" + (isSel ? " selected" : "") + (isInfo ? " info-edge" : "");
+    const markerEnd = isInfo ? "url(#arrow-info)" : (isSel ? "url(#arrow-sel)" : "url(#arrow)");
+    const line = svgEl("path", { d:path, class:cls, "marker-end":markerEnd,
+      onClick: (ev) => { ev.stopPropagation(); state.selectedNode=null; state.selectedEdge=edge.id; render(); }
+    });
+    g.appendChild(line);
+  });
+
+  // Connecting line
+  if (state.connecting) {
+    const c = state.connecting;
+    g.appendChild(svgEl("line", { x1:String(c.startX), y1:String(c.startY), x2:String(c.curX), y2:String(c.curY),
+      stroke:"#58a6ff", "stroke-width":"2", "stroke-dasharray":"6 3", "pointer-events":"none" }));
+  }
+
+  // Nodes
+  state.nodes.forEach(n => {
+    const w = nodeW(n), h = nodeH(n);
+    const colors = NODE_COLORS[n.type] || NODE_COLORS.process;
+    const isBn = bnId === n.id;
+    const isSel = state.selectedNode === n.id;
+
+    const ng = svgEl("g", {
+      class: "vsm-node" + (isSel ? " selected" : "") + (isBn ? " bottleneck" : ""),
+      transform: `translate(${n.x},${n.y})`
+    });
+
+    // Rect
+    ng.appendChild(svgEl("rect", {
+      width:String(w), height:String(h),
+      fill: colors.bg,
+      stroke: isBn ? "#ff6b6b" : colors.border,
+      "stroke-width": (isSel || isBn) ? "3" : "1.5",
+      ...(n.type === "infoflow" ? {"stroke-dasharray":"6 3"} : {})
+    }));
+
+    // Icon + label
+    const icon = NODE_ICONS[n.type] || "?";
+    ng.appendChild(svgEl("text", { x:String(w/2), y:"18", "text-anchor":"middle", fill:colors.text, "font-size":"14" }, icon));
+    // truncate label
+    const label = (n.label||"").length > 16 ? (n.label||"").slice(0,15)+"…" : (n.label||"");
+    ng.appendChild(svgEl("text", { x:String(w/2), y:"34", "text-anchor":"middle", fill:colors.text, "font-size":"11", "font-weight":"600" }, label));
+
+    // Process props
+    if (n.type === "process" && n.properties) {
+      const p = n.properties;
+      const lines = [
+        `CT: ${p.cycleTime}`,
+        `WIP: ${p.wip}  Up: ${p.uptime}%`,
+        `Workers: ${p.workers}`
+      ];
+      lines.forEach((l, i) => {
+        ng.appendChild(svgEl("text", { x:String(w/2), y:String(50 + i*14), "text-anchor":"middle", fill:"#8b949e", "font-size":"10" }, l));
+      });
+    }
+
+    // Inventory WIP
+    if (n.type === "inventory" && n.properties) {
+      ng.appendChild(svgEl("text", { x:String(w/2), y:"52", "text-anchor":"middle", fill:"#8b949e", "font-size":"10" }, `WIP: ${n.properties.wip}`));
+    }
+
+    // Bottleneck badge
+    if (isBn) {
+      ng.appendChild(svgEl("rect", { x:String(w-44), y:"-10", width:"48", height:"16", rx:"8", fill:"#ff6b6b" }));
+      ng.appendChild(svgEl("text", { x:String(w-20), y:"2", "text-anchor":"middle", fill:"#fff", "font-size":"9", "font-weight":"700" }, "BOTTLENECK"));
+    }
+
+    // Ports
+    ports(n).forEach(port => {
+      const circle = svgEl("circle", {
+        cx:String(port.x), cy:String(port.y), r:"5", class:"port", fill:"#58a6ff",
+        onMousedown: (ev) => {
+          ev.stopPropagation();
+          state.connecting = { sourceId:n.id, startX:n.x+port.x, startY:n.y+port.y, curX:n.x+port.x, curY:n.y+port.y };
+        }
+      });
+      ng.appendChild(circle);
+    });
+
+    // Mouse events
+    ng.addEventListener("mousedown", (ev) => {
+      if (state.connecting) return;
+      ev.stopPropagation();
+      state.selectedNode = n.id;
+      state.selectedEdge = null;
+      // Start drag
+      const svgRect = svg.getBoundingClientRect();
+      const mx = (ev.clientX - svgRect.left - state.pan.x) / state.zoom;
+      const my = (ev.clientY - svgRect.top - state.pan.y) / state.zoom;
+      state.dragging = { nodeId:n.id, offsetX: mx - n.x, offsetY: my - n.y };
+      render();
+    });
+
+    ng.addEventListener("mouseup", (ev) => {
+      if (state.connecting && state.connecting.sourceId !== n.id) {
+        // Complete connection
+        const srcId = state.connecting.sourceId;
+        const exists = state.edges.some(e => e.source === srcId && e.target === n.id);
+        if (!exists) {
+          state.edges.push({ id: "e_"+Date.now(), source: srcId, target: n.id });
+          persist();
+        }
+        state.connecting = null;
+        render();
+      }
+    });
+
+    ng.addEventListener("dblclick", (ev) => {
+      ev.stopPropagation();
+      if (n.type === "process" || n.type === "inventory") {
+        state.editNode = n.id;
+      }
+      // Check bottleneck click
+      if (isBn) {
+        state.showTOC = true;
+        state.tocNodeId = n.id;
+      }
+      render();
+    });
+
+    ng.addEventListener("contextmenu", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      state.ctxMenu = { x:ev.clientX, y:ev.clientY, nodeId:n.id };
+      render();
+    });
+
+    g.appendChild(ng);
+  });
+
+  svg.appendChild(g);
+
+  // Pan & zoom
+  let isPanning = false, panStart = { x:0,y:0 };
+  svg.addEventListener("mousedown", (ev) => {
+    if (ev.target === svg || ev.target.tagName === "circle" && ev.target.getAttribute("fill") === "#1e2d4d") {
+      isPanning = true;
+      panStart = { x:ev.clientX - state.pan.x, y:ev.clientY - state.pan.y };
+      state.selectedNode = null;
+      state.selectedEdge = null;
+      state.ctxMenu = null;
+      render();
+    }
+  });
+
+  svg.addEventListener("mousemove", (ev) => {
+    if (state.connecting) {
+      const svgRect = svg.getBoundingClientRect();
+      state.connecting.curX = (ev.clientX - svgRect.left - state.pan.x) / state.zoom;
+      state.connecting.curY = (ev.clientY - svgRect.top - state.pan.y) / state.zoom;
+      render();
+      return;
+    }
+    if (state.dragging) {
+      const svgRect = svg.getBoundingClientRect();
+      const mx = (ev.clientX - svgRect.left - state.pan.x) / state.zoom;
+      const my = (ev.clientY - svgRect.top - state.pan.y) / state.zoom;
+      const n = state.nodes.find(nd => nd.id === state.dragging.nodeId);
+      if (n) {
+        n.x = mx - state.dragging.offsetX;
+        n.y = my - state.dragging.offsetY;
+        persist();
+        render();
+      }
+      return;
+    }
+    if (isPanning) {
+      state.pan.x = ev.clientX - panStart.x;
+      state.pan.y = ev.clientY - panStart.y;
+      render();
+    }
+  });
+
+  svg.addEventListener("mouseup", () => {
+    isPanning = false;
+    state.dragging = null;
+    if (state.connecting) { state.connecting = null; render(); }
+  });
+
+  svg.addEventListener("mouseleave", () => {
+    isPanning = false;
+    state.dragging = null;
+    if (state.connecting) { state.connecting = null; render(); }
+  });
+
+  svg.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const delta = ev.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.2, Math.min(3, state.zoom * delta));
+    // Zoom toward cursor
+    const svgRect = svg.getBoundingClientRect();
+    const mx = ev.clientX - svgRect.left;
+    const my = ev.clientY - svgRect.top;
+    state.pan.x = mx - (mx - state.pan.x) * (newZoom / state.zoom);
+    state.pan.y = my - (my - state.pan.y) * (newZoom / state.zoom);
+    state.zoom = newZoom;
+    render();
+  }, { passive: false });
+
+  container.appendChild(svg);
+}
+
+// ── Render TOC Panel ──
+function renderTOC(container) {
+  const p = currentProject();
+  if (!p || !state.tocNodeId) return;
+
+  const tocData = p.toc[state.tocNodeId] || { ec:{}, crt:{ nodes:[], edges:[] }, frt:{ nodes:[], edges:[] } };
+  if (!p.toc[state.tocNodeId]) { p.toc[state.tocNodeId] = tocData; persist(); }
+
+  const node = state.nodes.find(n => n.id === state.tocNodeId);
+  const nodeLabel = node ? node.label : "Node";
+
+  const panel = el("div", { className:"toc-panel" });
+
+  // Header
+  const header = el("div", { className:"toc-header" },
+    el("h3", null, `TOC: ${nodeLabel}`),
+    el("button", { className:"toc-close", onClick:()=>{ state.showTOC=false; render(); } }, "✕")
+  );
+  panel.appendChild(header);
+
+  // Tabs
+  const tabs = el("div", { className:"toc-tabs" });
+  ["ec","crt","frt"].forEach(t => {
+    const labels = { ec:"EC (Cloud)", crt:"CRT", frt:"FRT" };
+    const btn = el("button", {
+      className: state.tocTab === t ? "active" : "",
+      onClick: () => { state.tocTab = t; render(); }
+    }, labels[t]);
+    tabs.appendChild(btn);
+  });
+  panel.appendChild(tabs);
+
+  // Body
+  const body = el("div", { className:"toc-body" });
+
+  if (state.tocTab === "ec") {
+    renderEC(body, tocData);
+  } else if (state.tocTab === "crt") {
+    renderTree(body, tocData.crt, "crt");
+  } else {
+    renderTree(body, tocData.frt, "frt");
+  }
+
+  panel.appendChild(body);
+  container.appendChild(panel);
+}
+
+// ── Render EC ──
+function renderEC(container, tocData) {
+  const ec = tocData.ec || {};
+  const form = el("div", { className:"ec-form" });
+
+  const fields = [
+    { key:"goal", label:"Goal (Objective)" },
+    { key:"needA", label:"Need A" },
+    { key:"prereqA", label:"Prerequisite A" },
+    { key:"needB", label:"Need B" },
+    { key:"prereqB", label:"Prerequisite B" },
+    { key:"assumptionAB", label:"Assumption: Why A & B conflict", type:"textarea" },
+    { key:"assumptionAPrereqA", label:"Assumption: Why Prereq A → Need A", type:"textarea" },
+    { key:"assumptionBPrereqB", label:"Assumption: Why Prereq B → Need B", type:"textarea" },
+    { key:"brokenAssumption", label:"Which assumption can be challenged?", type:"textarea" },
+  ];
+
+  fields.forEach(f => {
+    const label = el("label", null, el("span", null, f.label));
+    const input = f.type === "textarea"
+      ? el("textarea", { value: ec[f.key]||"", onInput:(ev)=>{ ec[f.key]=ev.target.value; persist(); } })
+      : el("input", { type:"text", value: ec[f.key]||"", onInput:(ev)=>{ ec[f.key]=ev.target.value; persist(); } });
+    label.appendChild(input);
+    form.appendChild(label);
+  });
+
+  container.appendChild(form);
+
+  // EC Visual diagram
+  if (ec.goal || ec.needA || ec.needB) {
+    const vis = el("div", { className:"ec-visual" });
+    vis.innerHTML = `
+      <div class="ec-row"><div class="ec-box" style="flex:0 0 auto;width:60px">Need A</div><div class="ec-arrow">→</div><div class="ec-box">${esc(ec.needA||"…")}</div><div class="ec-arrow">→</div><div class="ec-box">${esc(ec.prereqA||"…")}</div></div>
+      <div class="ec-row" style="justify-content:center"><div class="ec-arrow" style="transform:rotate(90deg);font-size:16px">↕</div></div>
+      <div class="ec-row" style="justify-content:center"><div class="ec-box ec-goal">${esc(ec.goal||"Goal")}</div></div>
+      <div class="ec-row" style="justify-content:center"><div class="ec-arrow" style="transform:rotate(90deg);font-size:16px">↕</div></div>
+      <div class="ec-conflict">⚡ CONFLICT ⚡</div>
+      <div class="ec-row"><div class="ec-box" style="flex:0 0 auto;width:60px">Need B</div><div class="ec-arrow">→</div><div class="ec-box">${esc(ec.needB||"…")}</div><div class="ec-arrow">→</div><div class="ec-box">${esc(ec.prereqB||"…")}</div></div>
+    `;
+    container.appendChild(vis);
+  }
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Render CRT / FRT Tree ──
+function renderTree(container, treeData, mode) {
+  const TREE_COLORS = {
+    symptom: { bg:"#2d1a1a", border:"#8b3030", text:"#ff8a8a" },
+    "intermediate-cause": { bg:"#2d2a1a", border:"#8b7a30", text:"#ffd080" },
+    "core-constraint": { bg:"#2d1f0a", border:"#aa6020", text:"#ffaa50" },
+    injection: { bg:"#1a2d1a", border:"#309050", text:"#80e0a0" },
+  };
+
+  // Toolbar
+  const toolbar = el("div", { className:"tree-toolbar" });
+  const types = mode === "frt"
+    ? ["symptom","intermediate-cause","core-constraint","injection"]
+    : ["symptom","intermediate-cause","core-constraint"];
+  const typeLabels = { symptom:"Symptom", "intermediate-cause":"Intermediate", "core-constraint":"Core Constraint", injection:"Injection" };
+
+  const sel = el("select");
+  types.forEach(t => {
+    sel.appendChild(el("option", { value:t }, typeLabels[t]));
+  });
+  toolbar.appendChild(sel);
+
+  const addBtn = el("button", { onClick:() => {
+    const type = sel.value;
+    const id = "tn_" + Date.now() + "_" + Math.random().toString(36).slice(2,5);
+    const yOff = { symptom:20, "intermediate-cause":120, "core-constraint":240, injection:60 };
+    treeData.nodes.push({
+      id, ttype:type, label: typeLabels[type] + " " + (treeData.nodes.length+1),
+      x: 20 + Math.random()*200, y: (yOff[type]||50) + Math.random()*60
+    });
+    persist();
+    render();
+  }}, "+ Add Node");
+  toolbar.appendChild(addBtn);
+
+  if (mode === "frt") {
+    const negBtn = el("button", {
+      className: state.frtNegMode ? "neg-active" : "",
+      onClick: () => { state.frtNegMode = !state.frtNegMode; render(); }
+    }, "NEG Branch");
+    toolbar.appendChild(negBtn);
+  }
+
+  // Delete selected tree node/edge
+  const delBtn = el("button", { onClick:() => {
+    if (state.treeSelectedNode) {
+      treeData.nodes = treeData.nodes.filter(n => n.id !== state.treeSelectedNode);
+      treeData.edges = treeData.edges.filter(e => e.source !== state.treeSelectedNode && e.target !== state.treeSelectedNode);
+      state.treeSelectedNode = null;
+      persist(); render();
+    } else if (state.treeSelectedEdge) {
+      treeData.edges = treeData.edges.filter(e => e.id !== state.treeSelectedEdge);
+      state.treeSelectedEdge = null;
+      persist(); render();
+    }
+  }}, "Delete");
+  toolbar.appendChild(delBtn);
+
+  container.appendChild(toolbar);
+
+  // Core constraint detection for CRT
+  let coreIds = new Set();
+  if (mode === "crt") {
+    coreIds = detectCoreConstraints(treeData.nodes, treeData.edges);
+    // Auto-mark
+    treeData.nodes.forEach(n => {
+      if (coreIds.has(n.id) && n.ttype !== "symptom") n.ttype = "core-constraint";
+    });
+  }
+
+  // Tree canvas
+  const treeWrap = el("div", { className:"tree-canvas", style:{ height:"320px" } });
+  const svg = svgEl("svg", { width:"100%", height:"100%", viewBox:"0 0 380 300" });
+
+  // Edges
+  treeData.edges.forEach(edge => {
+    const src = treeData.nodes.find(n => n.id === edge.source);
+    const tgt = treeData.nodes.find(n => n.id === edge.target);
+    if (!src || !tgt) return;
+    const isNeg = edge.assumption === "negative-branch";
+    const isSel = state.treeSelectedEdge === edge.id;
+    const line = svgEl("line", {
+      x1:String(src.x+50), y1:String(src.y+15), x2:String(tgt.x+50), y2:String(tgt.y+15),
+      stroke: isNeg ? "#f85149" : (mode==="frt" ? "#309050" : "#8b7a30"),
+      "stroke-width": isSel ? "3" : "2",
+      "stroke-dasharray": isNeg ? "6 3" : "none",
+      class: "tree-edge" + (isNeg ? " neg" : ""),
+      onClick: (ev) => { ev.stopPropagation(); state.treeSelectedEdge = edge.id; state.treeSelectedNode = null; render(); }
+    });
+    svg.appendChild(line);
+    // Edge label
+    if (edge.assumption && edge.assumption !== "negative-branch") {
+      svg.appendChild(svgEl("text", {
+        x:String((src.x+tgt.x)/2+50), y:String((src.y+tgt.y)/2+10),
+        fill:"#8b949e", "font-size":"9", "text-anchor":"middle"
+      }, edge.assumption));
+    }
+    if (isNeg) {
+      svg.appendChild(svgEl("text", {
+        x:String((src.x+tgt.x)/2+50), y:String((src.y+tgt.y)/2+10),
+        fill:"#f85149", "font-size":"9", "text-anchor":"middle", "font-weight":"700"
+      }, "NEG"));
+    }
+  });
+
+  // Connecting line for tree
+  if (state.treeConnecting) {
+    const c = state.treeConnecting;
+    svg.appendChild(svgEl("line", {
+      x1:String(c.sx), y1:String(c.sy), x2:String(c.cx), y2:String(c.cy),
+      stroke: state.frtNegMode && mode === "frt" ? "#f85149" : "#58a6ff",
+      "stroke-width":"2", "stroke-dasharray":"4 3"
+    }));
+  }
+
+  // Nodes
+  treeData.nodes.forEach(n => {
+    const colors = TREE_COLORS[n.ttype] || TREE_COLORS.symptom;
+    const isSel = state.treeSelectedNode === n.id;
+    const isCore = coreIds.has(n.id);
+    const ng = svgEl("g", { class:"tree-node", transform:`translate(${n.x},${n.y})` });
+
+    ng.appendChild(svgEl("rect", {
+      width:"100", height:"30",
+      fill: colors.bg,
+      stroke: isCore ? "#ff6b6b" : colors.border,
+      "stroke-width": isSel ? "3" : "1.5",
+      ...(n.ttype === "injection" ? {"stroke-dasharray":"5 3"} : {})
+    }));
+
+    const lbl = (n.label||"").length > 14 ? (n.label||"").slice(0,13)+"…" : (n.label||"");
+    ng.appendChild(svgEl("text", { x:"50", y:"19", "text-anchor":"middle", fill:colors.text, "font-size":"10" }, lbl));
+
+    // Port for connecting
+    ng.appendChild(svgEl("circle", {
+      cx:"50", cy:"30", r:"4", fill:"#58a6ff", opacity:"0.6", class:"port",
+      onMousedown: (ev) => {
+        ev.stopPropagation();
+        state.treeConnecting = { sourceId:n.id, sx:n.x+50, sy:n.y+30, cx:n.x+50, cy:n.y+30 };
+      }
+    }));
+    ng.appendChild(svgEl("circle", {
+      cx:"50", cy:"0", r:"4", fill:"#58a6ff", opacity:"0.6", class:"port",
+    }));
+
+    // Mouse events
+    ng.addEventListener("mousedown", (ev) => {
+      if (state.treeConnecting) return;
+      ev.stopPropagation();
+      state.treeSelectedNode = n.id;
+      state.treeSelectedEdge = null;
+      state.treeDragging = { nodeId:n.id, ox:ev.offsetX !== undefined ? ev.clientX - n.x : 0, oy:ev.offsetY !== undefined ? ev.clientY - n.y : 0 };
+      render();
+    });
+
+    ng.addEventListener("mouseup", (ev) => {
+      if (state.treeConnecting && state.treeConnecting.sourceId !== n.id) {
+        const srcId = state.treeConnecting.sourceId;
+        const exists = treeData.edges.some(e => e.source === srcId && e.target === n.id);
+        if (!exists) {
+          treeData.edges.push({
+            id: "te_"+Date.now(),
+            source: srcId,
+            target: n.id,
+            assumption: (state.frtNegMode && mode === "frt") ? "negative-branch" : ""
+          });
+          persist();
+        }
+        state.treeConnecting = null;
+        render();
+      }
+    });
+
+    ng.addEventListener("dblclick", (ev) => {
+      ev.stopPropagation();
+      const newLabel = prompt("Node label:", n.label);
+      if (newLabel !== null) { n.label = newLabel; persist(); render(); }
+    });
+
+    svg.appendChild(ng);
+  });
+
+  // SVG mouse events for tree
+  svg.addEventListener("mousemove", (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const svgW = svg.viewBox.baseVal.width || 380;
+    const svgH = svg.viewBox.baseVal.height || 300;
+    const scaleX = svgW / rect.width;
+    const scaleY = svgH / rect.height;
+    const mx = (ev.clientX - rect.left) * scaleX;
+    const my = (ev.clientY - rect.top) * scaleY;
+
+    if (state.treeConnecting) {
+      state.treeConnecting.cx = mx;
+      state.treeConnecting.cy = my;
+      render();
+      return;
+    }
+    if (state.treeDragging) {
+      const n = treeData.nodes.find(nd => nd.id === state.treeDragging.nodeId);
+      if (n) {
+        n.x = mx - 50;
+        n.y = my - 15;
+        persist();
+        render();
+      }
+    }
+  });
+
+  svg.addEventListener("mouseup", () => {
+    state.treeDragging = null;
+    if (state.treeConnecting) { state.treeConnecting = null; render(); }
+  });
+
+  svg.addEventListener("click", (ev) => {
+    if (ev.target === svg) {
+      state.treeSelectedNode = null;
+      state.treeSelectedEdge = null;
+      render();
+    }
+  });
+
+  treeWrap.appendChild(svg);
+  container.appendChild(treeWrap);
+
+  // Hint
+  const hints = {
+    crt: "IF (cause) → THEN (effect). Nodes reaching 2+ symptoms are auto-marked as Core Constraints.",
+    frt: "Add Injection nodes as proposed solutions. Use NEG Branch to mark unintended side effects."
+  };
+  container.appendChild(el("p", { className:"tree-hint" }, hints[mode]));
+}
+
+// ── Render Edit Modal ──
+function renderModal(container) {
+  if (!state.editNode) return;
+  const n = state.nodes.find(nd => nd.id === state.editNode);
+  if (!n) return;
+
+  const overlay = el("div", { className:"modal-overlay", onClick:(ev) => {
+    if (ev.target === overlay) { state.editNode = null; render(); }
+  }});
+
+  const modal = el("div", { className:"modal" });
+  modal.appendChild(el("h3", null, `Edit: ${n.label}`));
+
+  // Label
+  const lblField = el("label", null, el("span", null, "Label"));
+  const lblInput = el("input", { type:"text", value:n.label||"", onInput:(ev)=>{ n.label=ev.target.value; persist(); } });
+  lblField.appendChild(lblInput);
+  modal.appendChild(lblField);
+
+  if (n.type === "process") {
+    if (!n.properties) n.properties = { cycleTime:0, uptime:100, shifts:1, workers:1, wip:0 };
+    const props = [
+      { key:"cycleTime", label:"Cycle Time" },
+      { key:"wip", label:"WIP" },
+      { key:"uptime", label:"Uptime %" },
+      { key:"workers", label:"Workers" },
+    ];
+    props.forEach(p => {
+      const lab = el("label", null, el("span", null, p.label));
+      const inp = el("input", { type:"number", value:String(n.properties[p.key]||0),
+        onInput:(ev)=>{ n.properties[p.key] = parseFloat(ev.target.value)||0; persist(); }
+      });
+      lab.appendChild(inp);
+      modal.appendChild(lab);
+    });
+  } else if (n.type === "inventory") {
+    if (!n.properties) n.properties = { wip:0 };
+    const lab = el("label", null, el("span", null, "WIP"));
+    const inp = el("input", { type:"number", value:String(n.properties.wip||0),
+      onInput:(ev)=>{ n.properties.wip = parseFloat(ev.target.value)||0; persist(); }
+    });
+    lab.appendChild(inp);
+    modal.appendChild(lab);
+  }
+
+  const actions = el("div", { className:"modal-actions" });
+  actions.appendChild(el("button", { className:"btn-cancel", onClick:()=>{ state.editNode=null; render(); } }, "Close"));
+  actions.appendChild(el("button", { className:"btn-primary", onClick:()=>{ state.editNode=null; render(); } }, "Done"));
+  modal.appendChild(actions);
+
+  overlay.appendChild(modal);
+  container.appendChild(overlay);
+}
+
+// ── Render Context Menu ──
+function renderCtxMenu(container) {
+  if (!state.ctxMenu) return;
+  const menu = el("div", { className:"ctx-menu", style:{ left:state.ctxMenu.x+"px", top:state.ctxMenu.y+"px" } });
+
+  const n = state.nodes.find(nd => nd.id === state.ctxMenu.nodeId);
+  if (!n) return;
+
+  if (n.type === "process" || n.type === "inventory") {
+    menu.appendChild(el("button", { onClick:()=>{
+      state.editNode = n.id; state.ctxMenu = null; render();
+    }}, "Edit Properties"));
+  }
+
+  const bnId = detectBottleneck();
+  if (bnId === n.id) {
+    menu.appendChild(el("button", { onClick:()=>{
+      state.showTOC = true; state.tocNodeId = n.id; state.ctxMenu = null; render();
+    }}, "Open TOC Panel"));
+  }
+
+  menu.appendChild(el("button", { className:"danger", onClick:()=>{
+    state.nodes = state.nodes.filter(nd => nd.id !== n.id);
+    state.edges = state.edges.filter(e => e.source !== n.id && e.target !== n.id);
+    if (state.selectedNode === n.id) state.selectedNode = null;
+    state.ctxMenu = null;
+    persist(); render();
+  }}, "Delete Node"));
+
+  container.appendChild(menu);
+}
+
+// ── Export / Import ──
+function exportJSON() {
+  const p = currentProject();
+  if (!p) return;
+  const data = JSON.stringify(p, null, 2);
+  const blob = new Blob([data], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (p.name||"vsm-project") + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data.id) data.id = "p_" + Date.now();
+        if (!data.toc) data.toc = {};
+        state.projects[data.id] = data;
+        saveProjects(state.projects);
+        loadProject(data.id);
+      } catch(err) {
+        alert("Invalid JSON file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ── Main Render ──
+function render() {
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+
+  const app = el("div", { className:"app" });
+
+  // Toolbar
+  const toolbar = el("div", { className:"toolbar" });
+  toolbar.appendChild(el("span", { className:"brand" }, "VSM-TOC"));
+
+  // Project selector
+  const projSel = el("select", { onChange:(ev)=>{ loadProject(ev.target.value); } });
+  Object.values(state.projects).forEach(p => {
+    projSel.appendChild(el("option", { value:p.id, ...(p.id===state.currentId?{selected:true}:{}) }, p.name));
+  });
+  toolbar.appendChild(projSel);
+
+  // New project
+  toolbar.appendChild(el("button", { onClick:()=>{
+    const name = prompt("Project name:", "New VSM");
+    if (!name) return;
+    const p = newProject(name);
+    state.projects[p.id] = p;
+    saveProjects(state.projects);
+    loadProject(p.id);
+  }}, "+ New"));
+
+  // Rename
+  toolbar.appendChild(el("button", { onClick:()=>{
+    const p = currentProject();
+    if (!p) return;
+    const name = prompt("Rename project:", p.name);
+    if (name) { p.name = name; persist(); render(); }
+  }}, "Rename"));
+
+  toolbar.appendChild(el("div", { className:"sep" }));
+
+  // Node buttons
+  const nodeTypes = [
+    { type:"supplier", label:"Supplier", icon:"🏭" },
+    { type:"process", label:"Process", icon:"⚙️" },
+    { type:"inventory", label:"Inventory", icon:"▽" },
+    { type:"customer", label:"Customer", icon:"👤" },
+    { type:"infoflow", label:"InfoFlow", icon:"📋" },
+  ];
+  nodeTypes.forEach(nt => {
+    toolbar.appendChild(el("button", { className:"node-btn", onClick:()=>{
+      state.nodeCounter++;
+      const id = "n" + state.nodeCounter;
+      const node = {
+        id, type:nt.type, label:nt.label+" "+state.nodeCounter,
+        x: 200 + Math.random()*300 - state.pan.x/state.zoom,
+        y: 150 + Math.random()*200 - state.pan.y/state.zoom,
+      };
+      if (nt.type === "process") {
+        node.properties = { cycleTime:10, uptime:90, shifts:1, workers:1, wip:5 };
+      } else if (nt.type === "inventory") {
+        node.properties = { wip:10 };
+      }
+      state.nodes.push(node);
+      persist();
+      render();
+    }}, nt.icon + " " + nt.label));
+  });
+
+  toolbar.appendChild(el("div", { className:"sep" }));
+
+  // Export / Import
+  toolbar.appendChild(el("button", { onClick:exportJSON }, "Export JSON"));
+  toolbar.appendChild(el("button", { onClick:importJSON }, "Import JSON"));
+
+  // Delete selected
+  toolbar.appendChild(el("div", { className:"sep" }));
+  toolbar.appendChild(el("button", { onClick:()=>{
+    if (state.selectedNode) {
+      state.nodes = state.nodes.filter(n => n.id !== state.selectedNode);
+      state.edges = state.edges.filter(e => e.source !== state.selectedNode || e.target !== state.selectedNode);
+      state.selectedNode = null;
+      persist(); render();
+    } else if (state.selectedEdge) {
+      state.edges = state.edges.filter(e => e.id !== state.selectedEdge);
+      state.selectedEdge = null;
+      persist(); render();
+    }
+  }}, "Delete"));
+
+  app.appendChild(toolbar);
+
+  // Main area
+  const mainArea = el("div", { className:"main-area" });
+  const canvasWrap = el("div", { className:"canvas-wrap" });
+  renderCanvas(canvasWrap);
+  mainArea.appendChild(canvasWrap);
+
+  if (state.showTOC) {
+    renderTOC(mainArea);
+  }
+
+  app.appendChild(mainArea);
+
+  // Lead time bar
+  const lt = calcLeadTime();
+  const effClass = lt.eff > 50 ? "eff-good" : (lt.eff > 25 ? "eff-mid" : "eff-bad");
+  const bar = el("div", { className:"lead-time-bar" });
+  bar.appendChild(el("div", { className:"metric" },
+    el("span", { className:"metric-label" }, "Total Lead Time:"),
+    el("span", { className:"metric-value" }, lt.total.toFixed(1))
+  ));
+  bar.appendChild(el("div", { className:"metric" },
+    el("span", { className:"metric-label" }, "Value-Added:"),
+    el("span", { className:"metric-value" }, lt.va.toFixed(1))
+  ));
+  bar.appendChild(el("div", { className:"metric" },
+    el("span", { className:"metric-label" }, "Efficiency:"),
+    el("span", { className:"metric-value " + effClass }, lt.eff.toFixed(1) + "%")
+  ));
+
+  const bnId = detectBottleneck();
+  if (bnId) {
+    const bnNode = state.nodes.find(n => n.id === bnId);
+    bar.appendChild(el("div", { className:"metric" },
+      el("span", { className:"metric-label" }, "Bottleneck:"),
+      el("span", { className:"metric-value", style:{color:"#ff6b6b",cursor:"pointer"},
+        onClick:()=>{ state.showTOC=true; state.tocNodeId=bnId; render(); }
+      }, bnNode ? bnNode.label : bnId)
+    ));
+  }
+
+  app.appendChild(bar);
+
+  root.appendChild(app);
+
+  // Modals & overlays (outside main flow)
+  renderModal(root);
+  renderCtxMenu(root);
+}
+
+// ── Keyboard ──
+document.addEventListener("keydown", (ev) => {
+  if (state.editNode) return; // don't capture when modal open
+  if (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA" || ev.target.tagName === "SELECT") return;
+
+  if (ev.key === "Delete" || ev.key === "Backspace") {
+    if (state.selectedNode) {
+      state.nodes = state.nodes.filter(n => n.id !== state.selectedNode);
+      state.edges = state.edges.filter(e => e.source !== state.selectedNode || e.target !== state.selectedNode);
+      state.selectedNode = null;
+      persist(); render();
+    } else if (state.selectedEdge) {
+      state.edges = state.edges.filter(e => e.id !== state.selectedEdge);
+      state.selectedEdge = null;
+      persist(); render();
+    }
+  }
+  if (ev.key === "Escape") {
+    state.selectedNode = null;
+    state.selectedEdge = null;
+    state.connecting = null;
+    state.ctxMenu = null;
+    render();
+  }
+});
+
+// Close ctx menu on click outside
+document.addEventListener("click", () => {
+  if (state.ctxMenu) { state.ctxMenu = null; render(); }
+});
+
+// ── Go ──
+init();
+
+})();
+</script>
+</body>
+</html>
