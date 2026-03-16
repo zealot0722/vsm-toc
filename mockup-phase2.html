@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VSM-TOC Phase 2 Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0f1a;
+    color: #e0e0e8;
+    font-family: 'DM Sans', Inter, sans-serif;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #16162a;
+    border-bottom: 1px solid #2a2a42;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-title { font-size: 15px; font-weight: 600; color: #c8b4ff; }
+  .header-badge {
+    background: #2a2a42;
+    color: #8888bb;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .header-badge.phase2 { background: #2a1f42; color: #c8a0ff; }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 45px);
+  }
+
+  /* ── Canvas area ── */
+  .canvas-area {
+    flex: 1;
+    background: #0f0f1a;
+    position: relative;
+    overflow: hidden;
+  }
+  .canvas-bg {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, #2a2a42 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 0.4;
+  }
+
+  /* ── VSM Nodes ── */
+  .vsm-node {
+    position: absolute;
+    background: #1a1a2e;
+    border: 1.5px solid #3a3a5a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 140px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .vsm-node:hover { border-color: #8888bb; }
+  .vsm-node.bottleneck { border-color: #ff6b6b; box-shadow: 0 0 16px rgba(255,107,107,0.3); }
+  .vsm-node.selected { border-color: #c8b4ff; box-shadow: 0 0 20px rgba(200,180,255,0.3); }
+
+  .node-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .node-icon { font-size: 14px; }
+  .node-label { font-weight: 600; font-size: 12px; color: #c8c8e8; }
+  .bottleneck-badge {
+    margin-left: auto;
+    background: #ff6b6b22;
+    border: 1px solid #ff6b6b55;
+    color: #ff6b6b;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 6px;
+  }
+
+  /* ── NodeMetric rows (NEW) ── */
+  .metric-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-top: 1px solid #2a2a42;
+    gap: 4px;
+  }
+  .metric-label { color: #8888bb; font-size: 10px; flex: 1; }
+  .metric-val {
+    font-size: 11px;
+    font-weight: 600;
+    color: #e0e0e8;
+    min-width: 36px;
+    text-align: right;
+  }
+  .metric-target { color: #88d8b0; }
+  .metric-gap.bad { color: #ff6b6b; }
+  .metric-gap.ok { color: #88d8b0; }
+  .metric-sep { color: #3a3a5a; }
+  .metric-source {
+    font-size: 9px;
+    color: #5a5a7a;
+    margin-left: 2px;
+  }
+
+  /* ── Connector arrows ── */
+  svg.connectors {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    width: 360px;
+    background: #13132a;
+    border-left: 1px solid #2a2a42;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid #2a2a42;
+  }
+  .panel-tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 11px;
+    color: #5a5a8a;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .panel-tab.active {
+    color: #c8b4ff;
+    border-bottom-color: #c8b4ff;
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: #3a3a5a; border-radius: 4px; }
+
+  /* ── Section titles ── */
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #5a5a8a;
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── Hypothesis Card ── */
+  .hypothesis-card {
+    background: #1a1a2e;
+    border: 1px solid #2a2a42;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .hyp-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .hyp-status.running { background: #1f2a3a; color: #7ab8f5; border: 1px solid #3a5a7a; }
+  .hyp-status.draft { background: #2a2a1f; color: #c8b472; border: 1px solid #5a5a3a; }
+  .hyp-status.validated { background: #1a2a1a; color: #88d8b0; border: 1px solid #3a6a3a; }
+
+  .hyp-title { font-size: 12px; font-weight: 600; color: #c8c8e8; margin-bottom: 6px; }
+  .hyp-field { margin-bottom: 6px; }
+  .hyp-field-label { font-size: 10px; color: #5a5a8a; margin-bottom: 2px; }
+  .hyp-field-val { font-size: 11px; color: #a0a0cc; line-height: 1.4; }
+  .hyp-metric-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .hyp-tag {
+    background: #2a1f42;
+    color: #c8a0ff;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid #5a3a8a;
+  }
+
+  /* ── Mechanism Card ── */
+  .mechanism-card {
+    background: #1a2a1a;
+    border: 1px solid #2a4a2a;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .mech-title { font-size: 12px; font-weight: 600; color: #b0e8b0; margin-bottom: 8px; }
+  .mech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .mech-item { }
+  .mech-item-label { font-size: 9px; color: #5a8a5a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+  .mech-item-val { font-size: 11px; color: #a0c8a0; }
+  .mech-health {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #2a4a2a;
+    font-size: 10px;
+  }
+  .health-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .health-dot.normal { background: #88d8b0; box-shadow: 0 0 6px #88d8b066; }
+  .health-dot.abnormal { background: #ff6b6b; box-shadow: 0 0 6px #ff6b6b66; }
+
+  /* ── Before/After comparison ── */
+  .compare-block {
+    background: #1a1a2e;
+    border: 1px solid #2a2a42;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .compare-title { font-size: 12px; font-weight: 600; color: #c8c8e8; margin-bottom: 10px; }
+  .compare-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+  .compare-metric-name { flex: 1; font-size: 10px; color: #8888bb; }
+  .compare-before { font-size: 11px; color: #8888bb; min-width: 40px; text-align: right; }
+  .compare-arrow { color: #3a3a5a; font-size: 12px; }
+  .compare-after { font-size: 11px; font-weight: 600; min-width: 40px; }
+  .compare-after.better { color: #88d8b0; }
+  .compare-after.worse { color: #ff6b6b; }
+  .compare-bar-wrap { 
+    width: 60px; height: 6px; background: #2a2a42; border-radius: 3px; overflow: hidden;
+  }
+  .compare-bar { height: 100%; border-radius: 3px; }
+  .compare-bar.better { background: linear-gradient(90deg, #3a8a5a, #88d8b0); }
+  .compare-bar.worse { background: linear-gradient(90deg, #8a3a3a, #ff6b6b); }
+
+  /* ── Constraint Score ── */
+  .constraint-score-card {
+    background: #1a1a2e;
+    border: 1px solid #3a2a2a;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .cs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cs-title { font-size: 12px; font-weight: 600; color: #ff9a9a; }
+  .cs-score { font-size: 22px; font-weight: 700; color: #ff6b6b; }
+  .cs-row { margin-bottom: 5px; }
+  .cs-row-header { display: flex; justify-content: space-between; font-size: 10px; color: #8888bb; margin-bottom: 2px; }
+  .cs-bar-wrap { height: 5px; background: #2a2a42; border-radius: 3px; overflow: hidden; }
+  .cs-bar { height: 100%; border-radius: 3px; }
+  .cs-bar.high { background: linear-gradient(90deg, #ff6b6b, #ff9a9a); }
+  .cs-bar.mid { background: linear-gradient(90deg, #c8b472, #f5d87a); }
+  .cs-bar.low { background: linear-gradient(90deg, #3a8a5a, #88d8b0); }
+
+  /* ── Bottom legend ── */
+  .legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: #16162a;
+    border: 1px solid #2a2a42;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: #8888bb;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── New badge ── */
+  .new-badge {
+    background: #2a1f42;
+    color: #c8a0ff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    border: 1px solid #5a3a8a;
+  }
+
+  /* ── Add button ── */
+  .add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px dashed #3a3a5a;
+    border-radius: 8px;
+    padding: 8px;
+    color: #5a5a8a;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .add-btn:hover { border-color: #8888bb; color: #c8c8e8; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">⚗ VSM · TOC</div>
+  <div class="header-badge">電商客服流程 · Pilot Project</div>
+  <div class="header-badge phase2">Phase 2 <span class="new-badge">NEW</span></div>
+</div>
+
+<div class="layout">
+
+  <!-- ── Canvas ── -->
+  <div class="canvas-area">
+    <div class="canvas-bg"></div>
+
+    <!-- SVG connectors -->
+    <svg class="connectors">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#3a3a5a" />
+        </marker>
+      </defs>
+      <!-- Supplier → 分類 -->
+      <path d="M 185 130 C 220 130, 230 130, 270 130" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)"/>
+      <!-- 分類 → 標準件處理 -->
+      <path d="M 415 130 C 450 130, 460 200, 500 200" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)"/>
+      <!-- 標準件處理 → 結案 -->
+      <path d="M 645 200 C 680 200, 690 130, 720 130" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)"/>
+      <!-- 分類 → 例外件 (bottleneck) -->
+      <path d="M 415 130 C 450 130, 460 340, 500 340" stroke="#ff6b6b55" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="4 3"/>
+      <!-- 例外件 → 結案 -->
+      <path d="M 645 340 C 680 340, 690 130, 720 130" stroke="#ff6b6b55" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="4 3"/>
+      <!-- 結案 → 客戶 -->
+      <path d="M 862 130 C 897 130, 907 130, 940 130" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)"/>
+    </svg>
+
+    <!-- Node: 來件 (Supplier) -->
+    <div class="vsm-node" style="left:40px; top:90px; min-width:130px;">
+      <div class="node-header">
+        <span class="node-icon">🏭</span>
+        <span class="node-label">來件入口</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">日均來件</span>
+        <span class="metric-val">320</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">320</span>
+        <span class="metric-source">measured</span>
+      </div>
+    </div>
+
+    <!-- Node: 分類 -->
+    <div class="vsm-node selected" style="left:270px; top:90px;">
+      <div class="node-header">
+        <span class="node-icon">⚡</span>
+        <span class="node-label">分類</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">cycle time</span>
+        <span class="metric-val">8 min</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">2 min</span>
+        <span class="metric-gap bad">▼75%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">backlog</span>
+        <span class="metric-val">42件</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">10件</span>
+        <span class="metric-gap bad">↑320%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">source</span>
+        <span class="metric-val" style="color:#8888bb">estimated</span>
+      </div>
+    </div>
+
+    <!-- Node: 標準件處理 -->
+    <div class="vsm-node" style="left:500px; top:160px;">
+      <div class="node-header">
+        <span class="node-icon">✅</span>
+        <span class="node-label">標準件處理</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">cycle time</span>
+        <span class="metric-val">15 min</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">10 min</span>
+        <span class="metric-gap bad">▼33%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">FCR</span>
+        <span class="metric-val">72%</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">90%</span>
+        <span class="metric-gap bad">↓20%</span>
+      </div>
+    </div>
+
+    <!-- Node: 例外件（bottleneck） -->
+    <div class="vsm-node bottleneck" style="left:500px; top:300px;">
+      <div class="node-header">
+        <span class="node-icon">🔥</span>
+        <span class="node-label">例外件判斷</span>
+        <span class="bottleneck-badge">瓶頸</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">cycle time</span>
+        <span class="metric-val">48 min</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">15 min</span>
+        <span class="metric-gap bad">▼69%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">依賴風險</span>
+        <span class="metric-val" style="color:#ff6b6b">高（1人）</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">升級率</span>
+        <span class="metric-val">67%</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">20%</span>
+        <span class="metric-gap bad">↑47%</span>
+      </div>
+    </div>
+
+    <!-- Node: 結案 -->
+    <div class="vsm-node" style="left:720px; top:90px;">
+      <div class="node-header">
+        <span class="node-icon">📋</span>
+        <span class="node-label">回覆結案</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">cycle time</span>
+        <span class="metric-val">6 min</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">4 min</span>
+        <span class="metric-gap ok">✓</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">aging &gt;24h</span>
+        <span class="metric-val">23%</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">5%</span>
+        <span class="metric-gap bad">↑18%</span>
+      </div>
+    </div>
+
+    <!-- Node: 客戶 -->
+    <div class="vsm-node" style="left:940px; top:90px; min-width:100px;">
+      <div class="node-header">
+        <span class="node-icon">👤</span>
+        <span class="node-label">客戶</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">滿意度</span>
+        <span class="metric-val">3.8</span>
+        <span class="metric-sep">→</span>
+        <span class="metric-val metric-target">4.5</span>
+        <span class="metric-gap bad">↓0.7</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div> 瓶頸節點</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#88d8b0"></div> 目標值</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c8b4ff"></div> 選中節點</div>
+      <div class="legend-item" style="color:#5a5a7a">— — 例外件路徑</div>
+    </div>
+  </div>
+
+  <!-- ── Right Panel ── -->
+  <div class="right-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab">Constraint Score <span class="new-badge">NEW</span></div>
+      <div class="panel-tab active">Hypothesis <span class="new-badge">NEW</span></div>
+      <div class="panel-tab">Mechanism <span class="new-badge">NEW</span></div>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- Constraint Score -->
+      <div class="section-title">🔥 制約分數 · 例外件判斷</div>
+      <div class="constraint-score-card">
+        <div class="cs-header">
+          <div>
+            <div class="cs-title">例外件判斷</div>
+            <div style="font-size:10px;color:#8888bb;">綜合制約指數</div>
+          </div>
+          <div class="cs-score">87</div>
+        </div>
+        <div class="cs-row">
+          <div class="cs-row-header"><span>負荷/能力比</span><span style="color:#ff9a9a">3.2x</span></div>
+          <div class="cs-bar-wrap"><div class="cs-bar high" style="width:88%"></div></div>
+        </div>
+        <div class="cs-row">
+          <div class="cs-row-header"><span>Backlog Aging</span><span style="color:#f5d87a">中</span></div>
+          <div class="cs-bar-wrap"><div class="cs-bar mid" style="width:60%"></div></div>
+        </div>
+        <div class="cs-row">
+          <div class="cs-row-header"><span>人員依賴風險</span><span style="color:#ff9a9a">單點</span></div>
+          <div class="cs-bar-wrap"><div class="cs-bar high" style="width:95%"></div></div>
+        </div>
+        <div class="cs-row">
+          <div class="cs-row-header"><span>下游阻塞影響</span><span style="color:#f5d87a">67%</span></div>
+          <div class="cs-bar-wrap"><div class="cs-bar mid" style="width:67%"></div></div>
+        </div>
+        <div class="cs-row">
+          <div class="cs-row-header"><span>返工率</span><span style="color:#88d8b0">低</span></div>
+          <div class="cs-bar-wrap"><div class="cs-bar low" style="width:22%"></div></div>
+        </div>
+      </div>
+
+      <!-- ─ Hypothesis Cards ─ -->
+      <div class="section-title">💡 改善假設</div>
+
+      <div class="hypothesis-card">
+        <div class="hyp-status running">⏳ 進行中 · 第 8/14 天</div>
+        <div class="hyp-title">導入例外件決策樹，降低單點依賴</div>
+        <div class="hyp-field">
+          <div class="hyp-field-label">指向制約</div>
+          <div class="hyp-field-val">例外件判斷 → 只有1位資深客服能處理</div>
+        </div>
+        <div class="hyp-field">
+          <div class="hyp-field-label">預期效果</div>
+          <div class="hyp-field-val">升級率 67% → 20%，cycle time 48→15 min</div>
+        </div>
+        <div class="hyp-field">
+          <div class="hyp-field-label">驗證指標</div>
+          <div class="hyp-metric-tags">
+            <span class="hyp-tag">升級率</span>
+            <span class="hyp-tag">例外件 cycle time</span>
+            <span class="hyp-tag">backlog aging</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hypothesis-card">
+        <div class="hyp-status draft">📝 草稿</div>
+        <div class="hyp-title">AI 自動分類取代人工分類</div>
+        <div class="hyp-field">
+          <div class="hyp-field-label">預期效果</div>
+          <div class="hyp-field-val">分類 cycle time 8 → 2 min，backlog 42 → 10件</div>
+        </div>
+        <div class="hyp-field">
+          <div class="hyp-field-label">驗證指標</div>
+          <div class="hyp-metric-tags">
+            <span class="hyp-tag">分類 cycle time</span>
+            <span class="hyp-tag">分類準確率</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="add-btn">＋ 新增假設</div>
+
+      <!-- ─ Mechanism Cards ─ -->
+      <div class="section-title" style="margin-top:20px;">⚙️ 機制卡</div>
+
+      <div class="mechanism-card">
+        <div class="mech-title">例外件判斷 SOP 機制</div>
+        <div class="mech-grid">
+          <div class="mech-item">
+            <div class="mech-item-label">觸發條件</div>
+            <div class="mech-item-val">例外件標記</div>
+          </div>
+          <div class="mech-item">
+            <div class="mech-item-label">執行者</div>
+            <div class="mech-item-val">第一線客服</div>
+          </div>
+          <div class="mech-item">
+            <div class="mech-item-label">頻率</div>
+            <div class="mech-item-val">每件觸發</div>
+          </div>
+          <div class="mech-item">
+            <div class="mech-item-label">Backup</div>
+            <div class="mech-item-val">資深客服 Chen</div>
+          </div>
+          <div class="mech-item" style="grid-column:span 2">
+            <div class="mech-item-label">升級規則</div>
+            <div class="mech-item-val">決策樹無法覆蓋 → 升主管，&lt;4hr 回覆</div>
+          </div>
+        </div>
+        <div class="mech-health">
+          <div class="health-dot normal"></div>
+          <span style="color:#88d8b0">正常運作</span>
+          <span style="color:#3a5a3a;margin-left:auto">Owner: 王組長</span>
+        </div>
+      </div>
+
+      <!-- ─ Before/After ─ -->
+      <div class="section-title" style="margin-top:16px;">📊 改善前後對比</div>
+      <div class="compare-block">
+        <div class="compare-title">例外件判斷 · 第 1 週結果</div>
+        <div class="compare-row">
+          <span class="compare-metric-name">升級率</span>
+          <span class="compare-before">67%</span>
+          <span class="compare-arrow">→</span>
+          <span class="compare-after better">41%</span>
+          <div class="compare-bar-wrap"><div class="compare-bar better" style="width:61%"></div></div>
+        </div>
+        <div class="compare-row">
+          <span class="compare-metric-name">Cycle Time</span>
+          <span class="compare-before">48 min</span>
+          <span class="compare-arrow">→</span>
+          <span class="compare-after better">29 min</span>
+          <div class="compare-bar-wrap"><div class="compare-bar better" style="width:40%"></div></div>
+        </div>
+        <div class="compare-row">
+          <span class="compare-metric-name">下游 backlog</span>
+          <span class="compare-before">87件</span>
+          <span class="compare-arrow">→</span>
+          <span class="compare-after better">54件</span>
+          <div class="compare-bar-wrap"><div class="compare-bar better" style="width:38%"></div></div>
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #2a2a42;font-size:10px;color:#88d8b0;">
+          ✓ 約束有效縮小，第 2 週繼續觀察
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
