@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VSM-TOC — Value Stream Mapping + Theory of Constraints</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f0f1a;
+  --panel-bg: #13132a;
+  --node-bg: #1a1a2e;
+  --toolbar-bg: #0d1225;
+  --header-bg: #16162a;
+  --border: #2a2a42;
+  --border-light: #1e2d4d;
+  --accent-purple: #c8b4ff;
+  --accent-blue: #4a9eff;
+  --bottleneck-red: #ff6b6b;
+  --target-green: #88d8b0;
+  --warn-amber: #ffd080;
+  --text-primary: #e0e0e8;
+  --text-secondary: #8888bb;
+  --text-muted: #3a5070;
+  --text-bright: #e8edf5;
+  --input-bg: #0a1520;
+  --btn-blue-bg: #1e3a8a;
+  --btn-blue-border: #2d5aaa;
+  --btn-blue-text: #a0c0ff;
+}
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Inter', 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+/* ─── HEADER ─── */
+#header {
+  height: 46px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 200;
+}
+#header .logo { font-size: 15px; font-weight: 800; color: var(--accent-purple); white-space: nowrap; }
+#header .logo span { font-size: 10px; font-weight: 600; color: var(--text-secondary); background: var(--border); padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+#header .proj-name {
+  font-size: 13px; font-weight: 600; color: var(--text-bright);
+  background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: 3px 8px; min-width: 120px;
+}
+#header .proj-name:hover { border-color: var(--border); }
+#header .proj-name:focus { border-color: var(--accent-blue); outline: none; background: var(--input-bg); }
+#header .spacer { flex: 1; }
+.hdr-btn {
+  background: var(--border); border: 1px solid #3a3a5a; border-radius: 6px;
+  color: var(--text-secondary); font-size: 11px; font-weight: 600;
+  padding: 5px 12px; transition: all 0.15s;
+}
+.hdr-btn:hover { background: #3a3a5a; color: var(--text-primary); }
+.hdr-btn.active { background: var(--btn-blue-bg); border-color: var(--btn-blue-border); color: var(--btn-blue-text); }
+
+/* ─── MAIN LAYOUT ─── */
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── SIDEBAR ─── */
+#sidebar {
+  width: 200px;
+  background: var(--toolbar-bg);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+#sidebar .brand {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted);
+}
+#project-list {
+  flex: 1; overflow-y: auto; padding: 6px;
+}
+.proj-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px; border-radius: 7px;
+  color: var(--text-secondary); font-size: 12px; font-weight: 500;
+  cursor: pointer; border: 1px solid transparent; transition: all 0.12s;
+}
+.proj-item:hover { background: #1e2d4d; color: var(--text-primary); }
+.proj-item.active { background: #1e2d4d; color: var(--text-bright); border-color: var(--btn-blue-border); }
+.proj-item .del-proj {
+  margin-left: auto; background: none; border: none; color: #5a3a3a;
+  font-size: 14px; padding: 0 2px; line-height: 1; opacity: 0; transition: opacity 0.1s;
+}
+.proj-item:hover .del-proj { opacity: 1; }
+.proj-item .del-proj:hover { color: var(--bottleneck-red); }
+#sidebar .add-proj {
+  margin: 6px; padding: 8px;
+  background: #1e2d4d; border: 1px solid #2d4a7a; border-radius: 7px;
+  color: #8aadd8; font-size: 12px; font-weight: 600; text-align: center;
+}
+#sidebar .add-proj:hover { background: #2d3f6a; color: #b0ccf0; }
+
+/* ─── CANVAS AREA ─── */
+#canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+/* TOOLBAR (top of canvas) */
+#canvas-toolbar {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px; z-index: 50;
+  background: rgba(13,18,37,0.92); border: 1px solid var(--border-light);
+  border-radius: 8px; padding: 4px 6px;
+  backdrop-filter: blur(6px);
+}
+.tb-btn {
+  background: #1e2d4d; border: 1px solid #2d4a7a; border-radius: 6px;
+  padding: 5px 10px; color: #8aadd8; font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+.tb-btn:hover { background: #2d3f6a; color: #b0ccf0; }
+.tb-btn .icon { font-size: 13px; }
+
+/* SVG layer */
+#edge-svg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 1; pointer-events: none;
+}
+
+/* ─── NODES ─── */
+.vsm-node {
+  position: absolute;
+  background: var(--node-bg);
+  border: 1.5px solid #2d4a7a;
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 130px;
+  cursor: grab;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  user-select: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.vsm-node:hover { border-color: var(--text-secondary); }
+.vsm-node.selected { border-color: var(--accent-purple); box-shadow: 0 0 0 2px rgba(200,180,255,0.25), 0 4px 16px rgba(0,0,0,0.4); }
+.vsm-node.dragging { cursor: grabbing; z-index: 20; opacity: 0.92; }
+.vsm-node.bottleneck {
+  border-color: var(--bottleneck-red);
+  animation: bnPulse 2.5s infinite;
+}
+@keyframes bnPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255,107,107,0.15), 0 4px 16px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(255,107,107,0.35), 0 4px 16px rgba(0,0,0,0.4); }
+}
+.vsm-node .bn-badge {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: var(--bottleneck-red); color: #fff; font-size: 9px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.vsm-node .n-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.vsm-node .n-icon { font-size: 16px; }
+.vsm-node .n-label { font-size: 12px; font-weight: 600; color: #c8c8e8; }
+.vsm-node .n-metrics { border-top: 1px solid var(--border); padding-top: 4px; margin-top: 2px; }
+.vsm-node .n-row { display: flex; justify-content: space-between; font-size: 10px; padding: 1px 0; }
+.vsm-node .n-row .lbl { color: var(--text-secondary); }
+.vsm-node .n-row .val { font-weight: 600; color: var(--text-primary); }
+
+/* Node type colors */
+.vsm-node[data-type="supplier"] { border-color: #3d7a6b; background: linear-gradient(135deg, #132c2a, #16213e); }
+.vsm-node[data-type="process"] { border-color: #2d4a7a; background: linear-gradient(135deg, #141e35, #1a2540); min-width: 160px; }
+.vsm-node[data-type="inventory"] { border-color: #7a5c2d; background: linear-gradient(135deg, #2a2214, #1e1a10); min-width: 100px; }
+.vsm-node[data-type="customer"] { border-color: #5a3d7a; background: linear-gradient(135deg, #1e1530, #1a1228); }
+.vsm-node[data-type="infoflow"] { border-color: #2d6a7a; border-style: dashed; background: linear-gradient(135deg, #0e2530, #0a1e28); }
+
+/* Edge connect hint */
+#connect-hint {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(13,18,37,0.92); border: 1px solid var(--btn-blue-border);
+  border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600;
+  color: var(--accent-blue); z-index: 50; display: none;
+  backdrop-filter: blur(6px);
+}
+
+/* Lead time bar */
+#lead-time-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(13,18,37,0.92); border-top: 1px solid var(--border-light);
+  padding: 8px 20px; display: flex; align-items: center; justify-content: center;
+  gap: 24px; z-index: 40; backdrop-filter: blur(6px);
+}
+.lt-item .lt-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.lt-item .lt-val { font-size: 15px; font-weight: 700; color: #80a8e8; }
+.lt-item .lt-val.va { color: #80c090; }
+.lt-item .lt-val.pct { color: var(--warn-amber); }
+.lt-divider { width: 1px; height: 22px; background: var(--border-light); }
+
+/* ─── RIGHT PANEL ─── */
+#right-panel {
+  width: 320px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.2s;
+}
+#right-panel.hidden { width: 0; border: none; overflow: hidden; }
+.rp-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.rp-header h3 { font-size: 14px; font-weight: 700; color: var(--text-bright); }
+.rp-close {
+  background: none; border: none; color: var(--text-secondary); font-size: 18px; line-height: 1;
+}
+.rp-close:hover { color: var(--text-primary); }
+.rp-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+
+/* Tabs */
+.rp-tabs { display: flex; gap: 2px; padding: 8px 16px 0; }
+.rp-tab {
+  background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: 5px 12px; font-size: 11px; font-weight: 600;
+  color: var(--text-secondary); transition: all 0.12s;
+}
+.rp-tab:hover { color: var(--text-primary); }
+.rp-tab.active { background: var(--border); color: var(--accent-purple); border-color: #3a3a5a; }
+
+/* ─── NODE PROPS ─── */
+.np-section { margin-bottom: 14px; }
+.np-section-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+}
+.np-field { margin-bottom: 8px; }
+.np-field label {
+  display: block; font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 3px; text-transform: uppercase;
+}
+.np-field input, .np-field select {
+  width: 100%; background: var(--input-bg); border: 1px solid var(--border-light);
+  border-radius: 6px; padding: 6px 8px; color: var(--text-primary); font-size: 12px;
+}
+.np-field input:focus, .np-field select:focus { border-color: var(--btn-blue-border); outline: none; }
+
+/* Metrics table */
+.mt-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mt-table th {
+  text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase;
+  color: var(--text-muted); padding: 4px 4px; border-bottom: 1px solid var(--border);
+  letter-spacing: 0.05em;
+}
+.mt-table td { padding: 5px 4px; border-bottom: 1px solid #1a1a30; vertical-align: middle; }
+.mt-table .gap-good { color: var(--target-green); font-weight: 600; }
+.mt-table .gap-bad { color: var(--bottleneck-red); font-weight: 600; }
+.mt-table .src-badge {
+  font-size: 9px; padding: 1px 5px; border-radius: 6px; font-weight: 600;
+}
+.src-measured { background: #1a2a1a; color: var(--target-green); }
+.src-estimated { background: #2a2a1f; color: #c8b472; }
+.src-assumed { background: #2a1a1a; color: #c87272; }
+.mt-actions { display: flex; gap: 4px; }
+.mt-actions button {
+  background: none; border: none; color: var(--text-secondary); font-size: 12px;
+  padding: 0 2px; cursor: pointer;
+}
+.mt-actions button:hover { color: var(--text-primary); }
+.add-metric-btn {
+  background: #1e2d4d; border: 1px solid #2d4a7a; border-radius: 6px;
+  color: #8aadd8; font-size: 11px; font-weight: 600; padding: 5px 10px;
+  margin-top: 6px; width: 100%;
+}
+.add-metric-btn:hover { background: #2d3f6a; }
+
+/* ─── PHASE 2 PANEL ─── */
+.score-card {
+  background: var(--node-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; margin-bottom: 10px;
+}
+.score-card .sc-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.score-card .sc-name { font-size: 12px; font-weight: 600; color: #c8c8e8; }
+.score-card .sc-total { font-size: 20px; font-weight: 700; }
+.sc-total.high { color: var(--bottleneck-red); }
+.sc-total.mid { color: var(--warn-amber); }
+.sc-total.low { color: var(--target-green); }
+.sc-dim { margin-bottom: 6px; }
+.sc-dim-hdr { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 2px; }
+.sc-dim-hdr .dim-name { color: var(--text-secondary); }
+.sc-dim-hdr .dim-val { font-weight: 600; }
+.sc-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.sc-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.sc-bar-fill.high { background: linear-gradient(90deg, #ff6b6b, #ff9a9a); }
+.sc-bar-fill.mid { background: linear-gradient(90deg, #c8b472, #f5d87a); }
+.sc-bar-fill.low { background: linear-gradient(90deg, #3a8a5a, #88d8b0); }
+
+/* Hypothesis & Mechanism cards */
+.hyp-card, .mech-card {
+  background: var(--node-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.12s;
+}
+.hyp-card:hover, .mech-card:hover { border-color: #3a3a5a; }
+.card-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.card-title { font-size: 12px; font-weight: 600; color: #c8c8e8; }
+.card-actions { display: flex; gap: 4px; }
+.card-actions button { background: none; border: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+.card-actions button:hover { color: var(--text-primary); }
+.status-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700;
+}
+.status-draft { background: #2a2a1f; color: #c8b472; border: 1px solid #5a5a3a; }
+.status-running { background: #1f2a3a; color: #7ab8f5; border: 1px solid #3a5a7a; }
+.status-validated { background: #1a2a1a; color: var(--target-green); border: 1px solid #3a6a3a; }
+.status-invalidated { background: #2a1a1a; color: var(--bottleneck-red); border: 1px solid #5a3a3a; }
+.card-detail { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+.card-detail strong { color: var(--text-primary); font-weight: 600; }
+.metric-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.metric-tag {
+  font-size: 9px; padding: 2px 6px; border-radius: 6px;
+  background: #1f2a3a; color: #7ab8f5; border: 1px solid #3a5a7a;
+}
+.health-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px;
+}
+.health-normal { background: var(--target-green); box-shadow: 0 0 4px rgba(136,216,176,0.5); }
+.health-abnormal { background: var(--warn-amber); box-shadow: 0 0 4px rgba(255,208,128,0.5); }
+.health-stopped { background: var(--bottleneck-red); box-shadow: 0 0 4px rgba(255,107,107,0.5); }
+.mech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 10px; margin-top: 4px; }
+.mech-grid .mg-label { color: var(--text-muted); }
+.mech-grid .mg-val { color: var(--text-secondary); font-weight: 500; }
+
+/* Add button */
+.panel-add-btn {
+  width: 100%; padding: 8px; border-radius: 8px;
+  background: #1e2d4d; border: 1px solid #2d4a7a;
+  color: #8aadd8; font-size: 12px; font-weight: 600;
+  margin-bottom: 10px;
+}
+.panel-add-btn:hover { background: #2d3f6a; }
+
+/* ─── BEFORE/AFTER PANEL ─── */
+.ba-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid #1a1a30; font-size: 11px;
+}
+.ba-name { flex: 1; color: var(--text-secondary); font-weight: 500; min-width: 80px; }
+.ba-val { width: 60px; text-align: right; font-weight: 600; }
+.ba-arrow { color: var(--text-muted); font-size: 14px; }
+.ba-delta-good { color: var(--target-green); font-weight: 600; }
+.ba-delta-bad { color: var(--bottleneck-red); font-weight: 600; }
+.ba-input {
+  width: 60px; background: var(--input-bg); border: 1px solid var(--border-light);
+  border-radius: 4px; padding: 3px 5px; color: var(--text-primary); font-size: 11px;
+  text-align: right;
+}
+.ba-input:focus { border-color: var(--btn-blue-border); outline: none; }
+.ba-header { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.06em; }
+.ba-add-btn {
+  width: 100%; padding: 7px; border-radius: 6px;
+  background: #1e2d4d; border: 1px solid #2d4a7a;
+  color: #8aadd8; font-size: 11px; font-weight: 600; margin-top: 8px;
+}
+.ba-add-btn:hover { background: #2d3f6a; }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; animation: fadeIn 0.15s;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: #0f1628; border: 1px solid var(--border-light); border-radius: 14px;
+  width: 380px; max-height: 80vh; display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  animation: scaleIn 0.2s cubic-bezier(0.22, 0.68, 0, 1.2);
+}
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-hdr {
+  padding: 14px 18px; border-bottom: 1px solid var(--border-light);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-hdr h3 { font-size: 14px; font-weight: 700; color: var(--text-bright); }
+.modal-hdr .close-btn { background: none; border: none; color: var(--text-secondary); font-size: 18px; }
+.modal-body { padding: 14px 18px; overflow-y: auto; flex: 1; }
+.modal-footer {
+  padding: 10px 18px; border-top: 1px solid var(--border-light);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+.m-field { margin-bottom: 10px; }
+.m-field label {
+  display: block; font-size: 10px; font-weight: 600; text-transform: uppercase;
+  color: #5a7aaa; margin-bottom: 3px; letter-spacing: 0.04em;
+}
+.m-field input, .m-field select, .m-field textarea {
+  width: 100%; background: var(--input-bg); border: 1px solid var(--border-light);
+  border-radius: 7px; padding: 7px 10px; color: var(--text-primary); font-size: 12px;
+}
+.m-field textarea { resize: vertical; min-height: 50px; }
+.m-field input:focus, .m-field select:focus, .m-field textarea:focus { border-color: var(--btn-blue-border); outline: none; }
+.btn-cancel {
+  background: var(--toolbar-bg); border: 1px solid var(--border-light);
+  border-radius: 8px; padding: 7px 16px; color: #5a7aaa; font-size: 12px; font-weight: 600;
+}
+.btn-save {
+  background: var(--btn-blue-bg); border: 1px solid var(--btn-blue-border);
+  border-radius: 8px; padding: 7px 16px; color: var(--btn-blue-text); font-size: 12px; font-weight: 600;
+}
+.btn-cancel:hover { background: #1a2a3a; }
+.btn-save:hover { background: #2a4a9a; }
+.btn-danger {
+  background: #3a1a1a; border: 1px solid #5a3a3a;
+  border-radius: 8px; padding: 7px 16px; color: var(--bottleneck-red); font-size: 12px; font-weight: 600;
+}
+.btn-danger:hover { background: #4a2a2a; }
+
+/* Legend */
+#legend {
+  position: absolute; bottom: 42px; left: 12px;
+  background: var(--header-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; display: flex; gap: 10px; font-size: 10px; color: var(--text-secondary);
+  z-index: 40;
+}
+.leg-item { display: flex; align-items: center; gap: 4px; }
+.leg-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 40px 20px; color: var(--text-muted);
+}
+.empty-state .es-icon { font-size: 32px; margin-bottom: 10px; }
+.empty-state p { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">VSM-TOC <span>v1</span></div>
+  <input type="text" class="proj-name" id="projNameInput" placeholder="No project" disabled>
+  <div class="spacer"></div>
+  <button class="hdr-btn" id="btnExport" title="Export project data">Export</button>
+  <label class="hdr-btn" style="margin:0" title="Import project data">Import<input type="file" id="fileImport" accept=".json" style="display:none"></label>
+  <button class="hdr-btn" id="btnPhase2">Phase 2</button>
+  <button class="hdr-btn" id="btnBA">B/A</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="brand">Projects</div>
+    <div id="project-list"></div>
+    <button class="add-proj" id="btnNewProject">+ New Project</button>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <div id="canvas-toolbar">
+      <button class="tb-btn" data-type="supplier"><span class="icon">🏭</span> Supplier</button>
+      <button class="tb-btn" data-type="process"><span class="icon">⚙️</span> Process</button>
+      <button class="tb-btn" data-type="inventory"><span class="icon">📦</span> Inventory</button>
+      <button class="tb-btn" data-type="customer"><span class="icon">👤</span> Customer</button>
+      <button class="tb-btn" data-type="infoflow"><span class="icon">📋</span> InfoFlow</button>
+    </div>
+    <svg id="edge-svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#3a3a5a"/>
+        </marker>
+      </defs>
+    </svg>
+    <div id="nodes-container"></div>
+    <div id="connect-hint">Shift+Click: select source → then target to connect</div>
+    <div id="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--bottleneck-red)"></div> Bottleneck</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--target-green)"></div> Target</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--accent-purple)"></div> Selected</div>
+    </div>
+    <div id="lead-time-bar">
+      <div class="lt-item"><div class="lt-label">Total CT</div><div class="lt-val" id="ltTotalCT">—</div></div>
+      <div class="lt-divider"></div>
+      <div class="lt-item"><div class="lt-label">Processes</div><div class="lt-val" id="ltProcesses">0</div></div>
+      <div class="lt-divider"></div>
+      <div class="lt-item"><div class="lt-label">Bottleneck</div><div class="lt-val" id="ltBottleneck" style="color:var(--bottleneck-red)">—</div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel" class="hidden"></div>
+</div>
+
+<!-- MODAL CONTAINER -->
+<div id="modal-root"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// VSM-TOC Single-File App — State Management
+// ═══════════════════════════════════════════════════════
+
+const LS_KEY = 'vsm_toc_v1';
+
+class Store {
+  constructor() {
+    this.data = { projects: [], nodes: [], edges: [], metrics: [], hypotheses: [], mechanisms: [], beforeAfter: [] };
+    this.activeProjectId = null;
+    this.selectedNodeId = null;
+    this.load();
+  }
+
+  load() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.data = { ...this.data, ...parsed };
+      }
+    } catch (e) { console.warn('Failed to load from localStorage', e); }
+  }
+
+  save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(this.data)); } catch (e) { console.warn('Save failed', e); }
+  }
+
+  uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // ─── Projects ───
+  getProjects() { return this.data.projects; }
+  getProject(id) { return this.data.projects.find(p => p.id === id); }
+  createProject(name) {
+    const p = { id: this.uid(), name, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this.data.projects.push(p);
+    this.save();
+    return p;
+  }
+  renameProject(id, name) {
+    const p = this.getProject(id);
+    if (p) { p.name = name; p.updatedAt = new Date().toISOString(); this.save(); }
+  }
+  deleteProject(id) {
+    this.data.projects = this.data.projects.filter(p => p.id !== id);
+    this.data.nodes = this.data.nodes.filter(n => n.projectId !== id);
+    this.data.edges = this.data.edges.filter(e => e.projectId !== id);
+    this.data.metrics = this.data.metrics.filter(m => {
+      const node = this.data.nodes.find(n => n.id === m.nodeId);
+      return node !== undefined;
+    });
+    this.data.hypotheses = this.data.hypotheses.filter(h => h.projectId !== id);
+    this.data.mechanisms = this.data.mechanisms.filter(m => m.projectId !== id);
+    this.data.beforeAfter = this.data.beforeAfter.filter(b => b.projectId !== id);
+    if (this.activeProjectId === id) this.activeProjectId = null;
+    this.save();
+  }
+
+  // ─── Nodes ───
+  getNodes(projectId) { return this.data.nodes.filter(n => n.projectId === (projectId || this.activeProjectId)); }
+  getNode(id) { return this.data.nodes.find(n => n.id === id); }
+  addNode(type, x, y) {
+    const icons = { supplier: '🏭', process: '⚙️', inventory: '📦', customer: '👤', infoflow: '📋' };
+    const labels = { supplier: 'Supplier', process: 'Process', inventory: 'Inventory', customer: 'Customer', infoflow: 'Info Flow' };
+    const n = {
+      id: this.uid(), projectId: this.activeProjectId, type,
+      label: labels[type] || type, x, y,
+      properties: { cycleTime: 0, uptime: 100, staff: 1, wip: 0, isBottleneck: false }
+    };
+    this.data.nodes.push(n);
+    this.save();
+    return n;
+  }
+  updateNode(id, updates) {
+    const n = this.getNode(id);
+    if (n) { Object.assign(n, updates); this.save(); }
+  }
+  updateNodeProps(id, props) {
+    const n = this.getNode(id);
+    if (n) { Object.assign(n.properties, props); this.save(); }
+  }
+  deleteNode(id) {
+    this.data.nodes = this.data.nodes.filter(n => n.id !== id);
+    this.data.edges = this.data.edges.filter(e => e.sourceId !== id && e.targetId !== id);
+    this.data.metrics = this.data.metrics.filter(m => m.nodeId !== id);
+    if (this.selectedNodeId === id) this.selectedNodeId = null;
+    this.save();
+  }
+
+  // ─── Edges ───
+  getEdges(projectId) { return this.data.edges.filter(e => e.projectId === (projectId || this.activeProjectId)); }
+  addEdge(sourceId, targetId) {
+    const exists = this.data.edges.find(e => e.projectId === this.activeProjectId && e.sourceId === sourceId && e.targetId === targetId);
+    if (exists || sourceId === targetId) return null;
+    const e = { id: this.uid(), projectId: this.activeProjectId, sourceId, targetId };
+    this.data.edges.push(e);
+    this.save();
+    return e;
+  }
+  deleteEdge(id) {
+    this.data.edges = this.data.edges.filter(e => e.id !== id);
+    this.save();
+  }
+
+  // ─── Metrics ───
+  getMetrics(nodeId) { return this.data.metrics.filter(m => m.nodeId === nodeId); }
+  addMetric(nodeId) {
+    const m = { id: this.uid(), nodeId, metricName: '', currentValue: 0, targetValue: 0, unit: '', sourceType: 'estimated', notes: '' };
+    this.data.metrics.push(m);
+    this.save();
+    return m;
+  }
+  updateMetric(id, updates) {
+    const m = this.data.metrics.find(x => x.id === id);
+    if (m) { Object.assign(m, updates); this.save(); }
+  }
+  deleteMetric(id) {
+    this.data.metrics = this.data.metrics.filter(m => m.id !== id);
+    this.save();
+  }
+
+  // ─── Hypotheses ───
+  getHypotheses(projectId) { return this.data.hypotheses.filter(h => h.projectId === (projectId || this.activeProjectId)); }
+  addHypothesis(data) {
+    const h = { id: this.uid(), projectId: this.activeProjectId, title: '', suspectedConstraint: '', expectedEffect: '', validationMetrics: [], observationWindow: '', status: 'draft', createdAt: new Date().toISOString(), ...data };
+    this.data.hypotheses.push(h);
+    this.save();
+    return h;
+  }
+  updateHypothesis(id, updates) {
+    const h = this.data.hypotheses.find(x => x.id === id);
+    if (h) { Object.assign(h, updates); this.save(); }
+  }
+  deleteHypothesis(id) {
+    this.data.hypotheses = this.data.hypotheses.filter(h => h.id !== id);
+    this.save();
+  }
+
+  // ─── Mechanisms ───
+  getMechanisms(projectId) { return this.data.mechanisms.filter(m => m.projectId === (projectId || this.activeProjectId)); }
+  addMechanism(data) {
+    const m = { id: this.uid(), projectId: this.activeProjectId, title: '', trigger: '', actor: '', frequency: '', exceptionPath: '', escalationRule: '', backupRole: '', owner: '', healthStatus: 'normal', ...data };
+    this.data.mechanisms.push(m);
+    this.save();
+    return m;
+  }
+  updateMechanism(id, updates) {
+    const m = this.data.mechanisms.find(x => x.id === id);
+    if (m) { Object.assign(m, updates); this.save(); }
+  }
+  deleteMechanism(id) {
+    this.data.mechanisms = this.data.mechanisms.filter(m => m.id !== id);
+    this.save();
+  }
+
+  // ─── Before/After ───
+  getBeforeAfter(projectId) { return this.data.beforeAfter.filter(b => b.projectId === (projectId || this.activeProjectId)); }
+  addBeforeAfterRow(data) {
+    const b = { id: this.uid(), projectId: this.activeProjectId, metricName: '', beforeValue: 0, afterValue: 0, unit: '', ...data };
+    this.data.beforeAfter.push(b);
+    this.save();
+    return b;
+  }
+  updateBeforeAfter(id, updates) {
+    const b = this.data.beforeAfter.find(x => x.id === id);
+    if (b) { Object.assign(b, updates); this.save(); }
+  }
+  deleteBeforeAfter(id) {
+    this.data.beforeAfter = this.data.beforeAfter.filter(b => b.id !== id);
+    this.save();
+  }
+
+  // ─── Bottleneck detection ───
+  detectBottleneck() {
+    const nodes = this.getNodes();
+    const processNodes = nodes.filter(n => n.type === 'process');
+    if (processNodes.length === 0) return;
+    // Reset all
+    processNodes.forEach(n => { n.properties.isBottleneck = false; });
+    // Find highest cycleTime
+    let maxCT = -1, bnNode = null;
+    processNodes.forEach(n => {
+      const ct = parseFloat(n.properties.cycleTime) || 0;
+      if (ct > maxCT) { maxCT = ct; bnNode = n; }
+    });
+    if (bnNode && maxCT > 0) bnNode.properties.isBottleneck = true;
+    this.save();
+  }
+
+  // ─── Import/Export ───
+  exportData() { return JSON.stringify(this.data, null, 2); }
+  importData(json) {
+    try {
+      const parsed = JSON.parse(json);
+      this.data = { projects: [], nodes: [], edges: [], metrics: [], hypotheses: [], mechanisms: [], beforeAfter: [], ...parsed };
+      this.save();
+      return true;
+    } catch (e) { alert('Invalid JSON file'); return false; }
+  }
+}
+
+const store = new Store();
+
+// ═══════════════════════════════════════════════════════
+// UI Rendering
+// ═══════════════════════════════════════════════════════
+
+const $ = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => [...(ctx || document).querySelectorAll(sel)];
+
+const ICONS = { supplier: '🏭', process: '⚙️', inventory: '📦', customer: '👤', infoflow: '📋' };
+
+let rightPanelMode = null; // 'props' | 'phase2' | 'ba'
+let phase2Tab = 'score';
+let connectSource = null; // for shift-click edge creation
+
+function renderAll() {
+  renderSidebar();
+  renderCanvas();
+  renderRightPanel();
+  updateLeadTime();
+}
+
+// ─── SIDEBAR ───
+function renderSidebar() {
+  const list = $('#project-list');
+  const projects = store.getProjects();
+  if (projects.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="es-icon">📁</div><p>No projects yet</p></div>';
+    return;
+  }
+  list.innerHTML = projects.map(p => `
+    <div class="proj-item ${p.id === store.activeProjectId ? 'active' : ''}" data-id="${p.id}">
+      <span>📊</span> <span>${esc(p.name)}</span>
+      <button class="del-proj" data-id="${p.id}" title="Delete project">×</button>
+    </div>
+  `).join('');
+
+  $$('.proj-item', list).forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.classList.contains('del-proj')) return;
+      store.activeProjectId = el.dataset.id;
+      store.selectedNodeId = null;
+      rightPanelMode = null;
+      connectSource = null;
+      renderAll();
+    });
+  });
+  $$('.del-proj', list).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Delete this project and all its data?')) {
+        store.deleteProject(btn.dataset.id);
+        renderAll();
+      }
+    });
+  });
+
+  // Update header project name
+  const input = $('#projNameInput');
+  const proj = store.getProject(store.activeProjectId);
+  if (proj) {
+    input.value = proj.name;
+    input.disabled = false;
+  } else {
+    input.value = '';
+    input.disabled = true;
+  }
+}
+
+// ─── CANVAS ───
+function renderCanvas() {
+  const container = $('#nodes-container');
+  const svg = $('#edge-svg');
+
+  if (!store.activeProjectId) {
+    container.innerHTML = '<div class="empty-state" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)"><div class="es-icon">🗺️</div><p>Select or create a project to start mapping</p></div>';
+    svg.innerHTML = svg.querySelector('defs').outerHTML;
+    return;
+  }
+
+  store.detectBottleneck();
+  const nodes = store.getNodes();
+  const edges = store.getEdges();
+
+  // Render nodes
+  container.innerHTML = nodes.map(n => {
+    const cls = ['vsm-node'];
+    if (n.id === store.selectedNodeId) cls.push('selected');
+    if (n.properties.isBottleneck) cls.push('bottleneck');
+    const p = n.properties;
+    let metricsHtml = '';
+    if (n.type === 'process') {
+      metricsHtml = `<div class="n-metrics">
+        <div class="n-row"><span class="lbl">CT</span><span class="val">${p.cycleTime || 0}m</span></div>
+        <div class="n-row"><span class="lbl">Uptime</span><span class="val">${p.uptime || 100}%</span></div>
+        <div class="n-row"><span class="lbl">Staff</span><span class="val">${p.staff || 0}</span></div>
+        ${p.wip ? `<div class="n-row"><span class="lbl">WIP</span><span class="val">${p.wip}</span></div>` : ''}
+      </div>`;
+    }
+    return `<div class="${cls.join(' ')}" data-id="${n.id}" data-type="${n.type}" style="left:${n.x}px;top:${n.y}px">
+      ${n.properties.isBottleneck ? '<div class="bn-badge">BOTTLENECK</div>' : ''}
+      <div class="n-hdr"><span class="n-icon">${ICONS[n.type]}</span><span class="n-label">${esc(n.label)}</span></div>
+      ${metricsHtml}
+    </div>`;
+  }).join('');
+
+  // Render edges
+  const defsHtml = svg.querySelector('defs').outerHTML;
+  const edgePaths = edges.map(e => {
+    const src = nodes.find(n => n.id === e.sourceId);
+    const tgt = nodes.find(n => n.id === e.targetId);
+    if (!src || !tgt) return '';
+    const srcEl = container.querySelector(`[data-id="${src.id}"]`);
+    const tgtEl = container.querySelector(`[data-id="${tgt.id}"]`);
+    const sx = src.x + (srcEl ? srcEl.offsetWidth / 2 : 65);
+    const sy = src.y + (srcEl ? srcEl.offsetHeight / 2 : 30);
+    const tx = tgt.x + (tgtEl ? tgtEl.offsetWidth / 2 : 65);
+    const ty = tgt.y + (tgtEl ? tgtEl.offsetHeight / 2 : 30);
+    const mx = (sx + tx) / 2;
+    return `<path d="M${sx},${sy} Q${mx},${Math.min(sy, ty) - 30} ${tx},${ty}" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" data-edge-id="${e.id}"/>`;
+  }).join('');
+  svg.innerHTML = defsHtml + edgePaths;
+
+  // Attach node events
+  setupNodeDragging();
+}
+
+function setupNodeDragging() {
+  const container = $('#nodes-container');
+  $$('.vsm-node', container).forEach(el => {
+    let isDragging = false, startX, startY, origX, origY;
+
+    el.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      const node = store.getNode(el.dataset.id);
+      if (!node) return;
+
+      // Shift+click for edge connection
+      if (e.shiftKey) {
+        e.preventDefault();
+        if (!connectSource) {
+          connectSource = el.dataset.id;
+          el.style.outline = '2px solid var(--accent-blue)';
+          $('#connect-hint').style.display = 'block';
+          $('#connect-hint').textContent = `Source: ${node.label} — Shift+Click target node`;
+        } else {
+          const edge = store.addEdge(connectSource, el.dataset.id);
+          connectSource = null;
+          $('#connect-hint').style.display = 'none';
+          renderCanvas();
+          renderRightPanel();
+        }
+        return;
+      }
+
+      // Select node
+      store.selectedNodeId = el.dataset.id;
+      if (rightPanelMode !== 'phase2' && rightPanelMode !== 'ba') {
+        rightPanelMode = 'props';
+      }
+      renderCanvas();
+      renderRightPanel();
+
+      // Start drag
+      isDragging = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = node.x;
+      origY = node.y;
+
+      const reEl = container.querySelector(`[data-id="${el.dataset.id}"]`);
+      if (reEl) reEl.classList.add('dragging');
+
+      const onMove = (ev) => {
+        isDragging = true;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        const nx = Math.max(0, origX + dx);
+        const ny = Math.max(0, origY + dy);
+        store.updateNode(el.dataset.id, { x: nx, y: ny });
+        const nel = container.querySelector(`[data-id="${el.dataset.id}"]`);
+        if (nel) { nel.style.left = nx + 'px'; nel.style.top = ny + 'px'; }
+        renderEdges();
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const nel = container.querySelector(`[data-id="${el.dataset.id}"]`);
+        if (nel) nel.classList.remove('dragging');
+        if (isDragging) store.save();
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+
+  // Click canvas to deselect
+  container.parentElement.addEventListener('mousedown', (e) => {
+    if (e.target === container.parentElement || e.target.id === 'nodes-container') {
+      if (!e.shiftKey) {
+        store.selectedNodeId = null;
+        connectSource = null;
+        $('#connect-hint').style.display = 'none';
+        if (rightPanelMode === 'props') rightPanelMode = null;
+        renderCanvas();
+        renderRightPanel();
+      }
+    }
+  });
+}
+
+function renderEdges() {
+  const svg = $('#edge-svg');
+  const container = $('#nodes-container');
+  const nodes = store.getNodes();
+  const edges = store.getEdges();
+  const defsHtml = svg.querySelector('defs').outerHTML;
+  const paths = edges.map(e => {
+    const src = nodes.find(n => n.id === e.sourceId);
+    const tgt = nodes.find(n => n.id === e.targetId);
+    if (!src || !tgt) return '';
+    const srcEl = container.querySelector(`[data-id="${src.id}"]`);
+    const tgtEl = container.querySelector(`[data-id="${tgt.id}"]`);
+    const sw = srcEl ? srcEl.offsetWidth : 130;
+    const sh = srcEl ? srcEl.offsetHeight : 60;
+    const tw = tgtEl ? tgtEl.offsetWidth : 130;
+    const th = tgtEl ? tgtEl.offsetHeight : 60;
+    const sx = src.x + sw / 2;
+    const sy = src.y + sh / 2;
+    const tx = tgt.x + tw / 2;
+    const ty = tgt.y + th / 2;
+    const mx = (sx + tx) / 2;
+    return `<path d="M${sx},${sy} Q${mx},${Math.min(sy, ty) - 30} ${tx},${ty}" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" data-edge-id="${e.id}"/>`;
+  }).join('');
+  svg.innerHTML = defsHtml + paths;
+}
+
+function updateLeadTime() {
+  const nodes = store.getNodes();
+  const procs = nodes.filter(n => n.type === 'process');
+  const totalCT = procs.reduce((s, n) => s + (parseFloat(n.properties.cycleTime) || 0), 0);
+  const bn = procs.find(n => n.properties.isBottleneck);
+  $('#ltTotalCT').textContent = totalCT > 0 ? totalCT + 'm' : '—';
+  $('#ltProcesses').textContent = procs.length;
+  $('#ltBottleneck').textContent = bn ? bn.label : '—';
+}
+
+// ─── RIGHT PANEL ───
+function renderRightPanel() {
+  const panel = $('#right-panel');
+  if (!rightPanelMode || !store.activeProjectId) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+  panel.classList.remove('hidden');
+
+  if (rightPanelMode === 'props') renderNodeProps(panel);
+  else if (rightPanelMode === 'phase2') renderPhase2Panel(panel);
+  else if (rightPanelMode === 'ba') renderBAPanel(panel);
+}
+
+// ─── NODE PROPERTIES ───
+function renderNodeProps(panel) {
+  const node = store.getNode(store.selectedNodeId);
+  if (!node) {
+    panel.innerHTML = `<div class="rp-header"><h3>Properties</h3><button class="rp-close" onclick="closePanel()">×</button></div>
+      <div class="rp-body"><div class="empty-state"><p>Select a node to view properties</p></div></div>`;
+    return;
+  }
+
+  const metrics = store.getMetrics(node.id);
+  const p = node.properties;
+  const isProc = node.type === 'process';
+
+  panel.innerHTML = `
+    <div class="rp-header">
+      <h3>${ICONS[node.type]} ${esc(node.label)}</h3>
+      <button class="rp-close" onclick="closePanel()">×</button>
+    </div>
+    <div class="rp-body">
+      <div class="np-section">
+        <div class="np-section-title">Basic Info</div>
+        <div class="np-field">
+          <label>Label</label>
+          <input type="text" id="np-label" value="${esc(node.label)}">
+        </div>
+        <div class="np-field">
+          <label>Type</label>
+          <input type="text" value="${node.type}" disabled style="opacity:0.6">
+        </div>
+      </div>
+      ${isProc ? `
+      <div class="np-section">
+        <div class="np-section-title">Process Properties</div>
+        <div class="np-field"><label>Cycle Time (min)</label><input type="number" id="np-ct" value="${p.cycleTime}" min="0"></div>
+        <div class="np-field"><label>Uptime %</label><input type="number" id="np-uptime" value="${p.uptime}" min="0" max="100"></div>
+        <div class="np-field"><label>Staff</label><input type="number" id="np-staff" value="${p.staff}" min="0"></div>
+        <div class="np-field"><label>WIP</label><input type="number" id="np-wip" value="${p.wip}" min="0"></div>
+      </div>` : ''}
+      <div class="np-section">
+        <div class="np-section-title">Metrics</div>
+        ${metrics.length > 0 ? `
+        <table class="mt-table">
+          <thead><tr><th>Name</th><th>Current</th><th>Target</th><th>Gap</th><th>Src</th><th></th></tr></thead>
+          <tbody>
+            ${metrics.map(m => {
+              const gap = m.targetValue !== 0 ? ((m.currentValue - m.targetValue) / Math.abs(m.targetValue) * 100).toFixed(1) : '—';
+              const gapCls = gap !== '—' ? (parseFloat(gap) > 0 ? 'gap-bad' : 'gap-good') : '';
+              return `<tr>
+                <td>${esc(m.metricName) || '—'}</td>
+                <td>${m.currentValue}</td>
+                <td>${m.targetValue}</td>
+                <td class="${gapCls}">${gap !== '—' ? gap + '%' : '—'}</td>
+                <td><span class="src-badge src-${m.sourceType}">${m.sourceType}</span></td>
+                <td class="mt-actions">
+                  <button onclick="editMetricModal('${m.id}')" title="Edit">✏️</button>
+                  <button onclick="deleteMetric('${m.id}')" title="Delete">🗑️</button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>` : '<p style="font-size:11px;color:var(--text-muted)">No metrics yet</p>'}
+        <button class="add-metric-btn" onclick="addMetric()">+ Add Metric</button>
+      </div>
+      <div class="np-section">
+        <button class="btn-danger" style="width:100%" onclick="deleteSelectedNode()">Delete Node</button>
+      </div>
+    </div>`;
+
+  // Bind prop change handlers
+  const labelInput = $('#np-label', panel);
+  if (labelInput) {
+    labelInput.addEventListener('change', () => {
+      store.updateNode(node.id, { label: labelInput.value });
+      renderCanvas();
+      renderRightPanel();
+    });
+  }
+  if (isProc) {
+    const bind = (id, prop) => {
+      const el = $(id, panel);
+      if (el) el.addEventListener('change', () => {
+        store.updateNodeProps(node.id, { [prop]: parseFloat(el.value) || 0 });
+        store.detectBottleneck();
+        renderCanvas();
+        updateLeadTime();
+      });
+    };
+    bind('#np-ct', 'cycleTime');
+    bind('#np-uptime', 'uptime');
+    bind('#np-staff', 'staff');
+    bind('#np-wip', 'wip');
+  }
+}
+
+// ─── PHASE 2 PANEL ───
+function renderPhase2Panel(panel) {
+  panel.innerHTML = `
+    <div class="rp-header"><h3>Phase 2 — TOC Analysis</h3><button class="rp-close" onclick="closePanel()">×</button></div>
+    <div class="rp-tabs">
+      <button class="rp-tab ${phase2Tab === 'score' ? 'active' : ''}" onclick="setPhase2Tab('score')">Constraint Score</button>
+      <button class="rp-tab ${phase2Tab === 'hypothesis' ? 'active' : ''}" onclick="setPhase2Tab('hypothesis')">Hypothesis</button>
+      <button class="rp-tab ${phase2Tab === 'mechanism' ? 'active' : ''}" onclick="setPhase2Tab('mechanism')">Mechanism</button>
+    </div>
+    <div class="rp-body" id="phase2-body"></div>`;
+
+  if (phase2Tab === 'score') renderConstraintScore();
+  else if (phase2Tab === 'hypothesis') renderHypotheses();
+  else if (phase2Tab === 'mechanism') renderMechanisms();
+}
+
+function renderConstraintScore() {
+  const body = $('#phase2-body');
+  const nodes = store.getNodes().filter(n => n.type === 'process');
+  if (nodes.length === 0) {
+    body.innerHTML = '<div class="empty-state"><p>Add process nodes to see constraint scores</p></div>';
+    return;
+  }
+
+  const avgCT = nodes.reduce((s, n) => s + (parseFloat(n.properties.cycleTime) || 0), 0) / nodes.length || 1;
+
+  const scores = nodes.map(n => {
+    const ct = parseFloat(n.properties.cycleTime) || 0;
+    const metrics = store.getMetrics(n.id);
+
+    // 1. Load ratio
+    const loadRatio = Math.min(100, (ct / avgCT) * 50);
+
+    // 2. Backlog
+    const backlogM = metrics.find(m => m.metricName.toLowerCase().includes('backlog'));
+    const backlog = backlogM ? Math.min(100, parseFloat(backlogM.currentValue) || 0) : 0;
+
+    // 3. Escalation rate
+    const escM = metrics.find(m => m.metricName.toLowerCase().includes('escalation'));
+    const escalation = escM ? Math.min(100, parseFloat(escM.currentValue) || 0) : 0;
+
+    // 4. Dependency risk
+    const hasDep = metrics.some(m => (m.notes || '').match(/single|依賴/i));
+    const depRisk = hasDep ? 80 : 20;
+
+    // 5. Quality gap
+    const gaps = metrics.filter(m => m.targetValue !== 0).map(m => Math.abs((m.currentValue - m.targetValue) / m.targetValue * 100));
+    const qualGap = gaps.length > 0 ? Math.min(100, gaps.reduce((s, g) => s + g, 0) / gaps.length) : 0;
+
+    const total = Math.round((loadRatio * 0.3 + backlog * 0.2 + escalation * 0.15 + depRisk * 0.2 + qualGap * 0.15));
+
+    return { node: n, loadRatio, backlog, escalation, depRisk, qualGap, total };
+  }).sort((a, b) => b.total - a.total);
+
+  body.innerHTML = scores.map(s => {
+    const cls = s.total >= 60 ? 'high' : s.total >= 35 ? 'mid' : 'low';
+    const dims = [
+      { name: 'Load Ratio', val: s.loadRatio },
+      { name: 'Backlog', val: s.backlog },
+      { name: 'Escalation Rate', val: s.escalation },
+      { name: 'Dependency Risk', val: s.depRisk },
+      { name: 'Quality Gap', val: s.qualGap },
+    ];
+    return `<div class="score-card">
+      <div class="sc-hdr"><span class="sc-name">${ICONS.process} ${esc(s.node.label)}</span><span class="sc-total ${cls}">${s.total}</span></div>
+      ${dims.map(d => {
+        const dc = d.val >= 60 ? 'high' : d.val >= 35 ? 'mid' : 'low';
+        return `<div class="sc-dim">
+          <div class="sc-dim-hdr"><span class="dim-name">${d.name}</span><span class="dim-val" style="color:var(--${dc === 'high' ? 'bottleneck-red' : dc === 'mid' ? 'warn-amber' : 'target-green'})">${Math.round(d.val)}</span></div>
+          <div class="sc-bar"><div class="sc-bar-fill ${dc}" style="width:${d.val}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderHypotheses() {
+  const body = $('#phase2-body');
+  const hyps = store.getHypotheses();
+  body.innerHTML = `<button class="panel-add-btn" onclick="openHypModal()">+ New Hypothesis</button>` +
+    (hyps.length === 0 ? '<div class="empty-state"><p>No hypotheses yet</p></div>' :
+    hyps.map(h => `
+      <div class="hyp-card">
+        <div class="card-hdr">
+          <span class="card-title">${esc(h.title)}</span>
+          <div class="card-actions">
+            <button onclick="openHypModal('${h.id}')" title="Edit">✏️</button>
+            <button onclick="deleteHyp('${h.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        <span class="status-badge status-${h.status}">${h.status}</span>
+        <div class="card-detail" style="margin-top:6px"><strong>Constraint:</strong> ${esc(h.suspectedConstraint)}</div>
+        <div class="card-detail"><strong>Expected:</strong> ${esc(h.expectedEffect)}</div>
+        ${h.observationWindow ? `<div class="card-detail"><strong>Window:</strong> ${esc(h.observationWindow)}</div>` : ''}
+        ${h.validationMetrics && h.validationMetrics.length > 0 ? `<div class="metric-tags">${h.validationMetrics.map(t => `<span class="metric-tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    `).join(''));
+}
+
+function renderMechanisms() {
+  const body = $('#phase2-body');
+  const mechs = store.getMechanisms();
+  body.innerHTML = `<button class="panel-add-btn" onclick="openMechModal()">+ New Mechanism</button>` +
+    (mechs.length === 0 ? '<div class="empty-state"><p>No mechanisms yet</p></div>' :
+    mechs.map(m => `
+      <div class="mech-card">
+        <div class="card-hdr">
+          <span class="card-title"><span class="health-dot health-${m.healthStatus}"></span>${esc(m.title)}</span>
+          <div class="card-actions">
+            <button onclick="openMechModal('${m.id}')" title="Edit">✏️</button>
+            <button onclick="deleteMech('${m.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        <div class="mech-grid">
+          <span class="mg-label">Trigger</span><span class="mg-val">${esc(m.trigger)}</span>
+          <span class="mg-label">Actor</span><span class="mg-val">${esc(m.actor)}</span>
+          <span class="mg-label">Frequency</span><span class="mg-val">${esc(m.frequency)}</span>
+          <span class="mg-label">Owner</span><span class="mg-val">${esc(m.owner)}</span>
+          ${m.backupRole ? `<span class="mg-label">Backup</span><span class="mg-val">${esc(m.backupRole)}</span>` : ''}
+          ${m.escalationRule ? `<span class="mg-label">Escalation</span><span class="mg-val">${esc(m.escalationRule)}</span>` : ''}
+        </div>
+      </div>
+    `).join(''));
+}
+
+// ─── BEFORE/AFTER PANEL ───
+function renderBAPanel(panel) {
+  const rows = store.getBeforeAfter();
+  panel.innerHTML = `
+    <div class="rp-header"><h3>Before / After</h3><button class="rp-close" onclick="closePanel()">×</button></div>
+    <div class="rp-body">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <span class="ba-header" style="flex:1">Metric</span>
+        <span class="ba-header" style="width:60px;text-align:right">Before</span>
+        <span class="ba-header" style="width:20px"></span>
+        <span class="ba-header" style="width:60px;text-align:right">After</span>
+        <span class="ba-header" style="width:50px;text-align:right">Delta</span>
+        <span class="ba-header" style="width:30px"></span>
+      </div>
+      ${rows.map(r => {
+        const bv = parseFloat(r.beforeValue) || 0;
+        const av = parseFloat(r.afterValue) || 0;
+        const delta = bv !== 0 ? ((av - bv) / Math.abs(bv) * 100).toFixed(1) : '—';
+        const isBetter = av < bv;
+        const arrow = av < bv ? '↓' : av > bv ? '↑' : '→';
+        return `<div class="ba-row">
+          <span class="ba-name">${esc(r.metricName)}</span>
+          <input class="ba-input" type="number" value="${bv}" data-id="${r.id}" data-field="beforeValue" onchange="updateBA(this)">
+          <span class="ba-arrow">→</span>
+          <input class="ba-input" type="number" value="${av}" data-id="${r.id}" data-field="afterValue" onchange="updateBA(this)">
+          <span class="${isBetter ? 'ba-delta-good' : 'ba-delta-bad'}" style="width:50px;text-align:right">${delta !== '—' ? delta + '%' : '—'}</span>
+          <span style="width:30px;text-align:center;font-size:14px" class="${isBetter ? 'ba-delta-good' : 'ba-delta-bad'}">${arrow}</span>
+          <button style="background:none;border:none;color:#5a3a3a;font-size:13px;cursor:pointer" onclick="deleteBARow('${r.id}')" title="Delete">×</button>
+        </div>`;
+      }).join('')}
+      ${rows.length === 0 ? '<div class="empty-state"><p>No comparison data yet</p></div>' : ''}
+      <button class="ba-add-btn" onclick="addBARow()">+ Add Metric Row</button>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// Global Action Functions
+// ═══════════════════════════════════════════════════════
+
+function closePanel() {
+  rightPanelMode = null;
+  store.selectedNodeId = null;
+  renderRightPanel();
+  renderCanvas();
+}
+
+function setPhase2Tab(tab) {
+  phase2Tab = tab;
+  renderRightPanel();
+}
+
+function deleteSelectedNode() {
+  if (confirm('Delete this node?')) {
+    store.deleteNode(store.selectedNodeId);
+    rightPanelMode = null;
+    renderAll();
+  }
+}
+
+function addMetric() {
+  if (!store.selectedNodeId) return;
+  const m = store.addMetric(store.selectedNodeId);
+  editMetricModal(m.id);
+}
+
+function deleteMetric(id) {
+  store.deleteMetric(id);
+  renderRightPanel();
+}
+
+function deleteHyp(id) {
+  if (confirm('Delete this hypothesis?')) {
+    store.deleteHypothesis(id);
+    renderRightPanel();
+  }
+}
+
+function deleteMech(id) {
+  if (confirm('Delete this mechanism?')) {
+    store.deleteMechanism(id);
+    renderRightPanel();
+  }
+}
+
+function updateBA(el) {
+  store.updateBeforeAfter(el.dataset.id, { [el.dataset.field]: parseFloat(el.value) || 0 });
+  renderRightPanel();
+}
+
+function addBARow() {
+  showModal('Add Metric Row', [
+    { key: 'metricName', label: 'Metric Name', type: 'text' },
+    { key: 'beforeValue', label: 'Before Value', type: 'number' },
+    { key: 'afterValue', label: 'After Value', type: 'number' },
+    { key: 'unit', label: 'Unit', type: 'text' },
+  ], {}, (vals) => {
+    store.addBeforeAfterRow(vals);
+    renderRightPanel();
+  });
+}
+
+function deleteBARow(id) {
+  store.deleteBeforeAfter(id);
+  renderRightPanel();
+}
+
+// ─── MODALS ───
+function showModal(title, fields, data, onSave, onDelete) {
+  const root = $('#modal-root');
+  root.innerHTML = `<div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-hdr"><h3>${title}</h3><button class="close-btn" id="modal-close">×</button></div>
+      <div class="modal-body">
+        ${fields.map(f => {
+          const val = data[f.key] !== undefined ? data[f.key] : (f.default || '');
+          if (f.type === 'select') {
+            return `<div class="m-field"><label>${f.label}</label><select id="mf-${f.key}">
+              ${f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+            </select></div>`;
+          }
+          if (f.type === 'textarea') {
+            return `<div class="m-field"><label>${f.label}</label><textarea id="mf-${f.key}">${esc(String(val))}</textarea></div>`;
+          }
+          return `<div class="m-field"><label>${f.label}</label><input type="${f.type || 'text'}" id="mf-${f.key}" value="${esc(String(val))}"></div>`;
+        }).join('')}
+      </div>
+      <div class="modal-footer">
+        ${onDelete ? '<button class="btn-danger" id="modal-delete">Delete</button>' : ''}
+        <button class="btn-cancel" id="modal-cancel">Cancel</button>
+        <button class="btn-save" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>`;
+
+  const close = () => { root.innerHTML = ''; };
+  $('#modal-close', root).onclick = close;
+  $('#modal-cancel', root).onclick = close;
+  root.querySelector('.modal-overlay').addEventListener('click', (e) => {
+    if (e.target === root.querySelector('.modal-overlay')) close();
+  });
+
+  $('#modal-save', root).onclick = () => {
+    const vals = {};
+    fields.forEach(f => {
+      const el = $(`#mf-${f.key}`, root);
+      if (f.type === 'number') vals[f.key] = parseFloat(el.value) || 0;
+      else vals[f.key] = el.value;
+    });
+    onSave(vals);
+    close();
+  };
+
+  if (onDelete) {
+    $('#modal-delete', root).onclick = () => { onDelete(); close(); };
+  }
+}
+
+function editMetricModal(id) {
+  const m = store.data.metrics.find(x => x.id === id);
+  if (!m) return;
+  showModal('Edit Metric', [
+    { key: 'metricName', label: 'Metric Name', type: 'text' },
+    { key: 'currentValue', label: 'Current Value', type: 'number' },
+    { key: 'targetValue', label: 'Target Value', type: 'number' },
+    { key: 'unit', label: 'Unit', type: 'text' },
+    { key: 'sourceType', label: 'Source Type', type: 'select', options: ['measured', 'estimated', 'assumed'] },
+    { key: 'notes', label: 'Notes', type: 'textarea' },
+  ], m, (vals) => {
+    store.updateMetric(id, vals);
+    renderRightPanel();
+  }, () => {
+    store.deleteMetric(id);
+    renderRightPanel();
+  });
+}
+
+function openHypModal(id) {
+  const h = id ? store.data.hypotheses.find(x => x.id === id) : {};
+  const isEdit = !!id;
+  const data = isEdit ? { ...h, validationMetrics: (h.validationMetrics || []).join(', ') } : { title: '', suspectedConstraint: '', expectedEffect: '', validationMetrics: '', observationWindow: '', status: 'draft' };
+
+  showModal(isEdit ? 'Edit Hypothesis' : 'New Hypothesis', [
+    { key: 'title', label: 'Title', type: 'text' },
+    { key: 'suspectedConstraint', label: 'Suspected Constraint', type: 'text' },
+    { key: 'expectedEffect', label: 'Expected Effect', type: 'textarea' },
+    { key: 'validationMetrics', label: 'Validation Metrics (comma sep)', type: 'text' },
+    { key: 'observationWindow', label: 'Observation Window', type: 'text' },
+    { key: 'status', label: 'Status', type: 'select', options: ['draft', 'running', 'validated', 'invalidated'] },
+  ], data, (vals) => {
+    vals.validationMetrics = vals.validationMetrics ? vals.validationMetrics.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (isEdit) store.updateHypothesis(id, vals);
+    else store.addHypothesis(vals);
+    renderRightPanel();
+  }, isEdit ? () => { store.deleteHypothesis(id); renderRightPanel(); } : null);
+}
+
+function openMechModal(id) {
+  const m = id ? store.data.mechanisms.find(x => x.id === id) : {};
+  const isEdit = !!id;
+  const data = isEdit ? { ...m } : { title: '', trigger: '', actor: '', frequency: '', exceptionPath: '', escalationRule: '', backupRole: '', owner: '', healthStatus: 'normal' };
+
+  showModal(isEdit ? 'Edit Mechanism' : 'New Mechanism', [
+    { key: 'title', label: 'Title', type: 'text' },
+    { key: 'trigger', label: 'Trigger', type: 'text' },
+    { key: 'actor', label: 'Actor', type: 'text' },
+    { key: 'frequency', label: 'Frequency', type: 'text' },
+    { key: 'exceptionPath', label: 'Exception Path', type: 'textarea' },
+    { key: 'escalationRule', label: 'Escalation Rule', type: 'text' },
+    { key: 'backupRole', label: 'Backup Role', type: 'text' },
+    { key: 'owner', label: 'Owner', type: 'text' },
+    { key: 'healthStatus', label: 'Health Status', type: 'select', options: ['normal', 'abnormal', 'stopped'] },
+  ], data, (vals) => {
+    if (isEdit) store.updateMechanism(id, vals);
+    else store.addMechanism(vals);
+    renderRightPanel();
+  }, isEdit ? () => { store.deleteMechanism(id); renderRightPanel(); } : null);
+}
+
+// ─── HELPERS ───
+function esc(s) {
+  if (s === undefined || s === null) return '';
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+// ═══════════════════════════════════════════════════════
+// EVENT BINDINGS
+// ═══════════════════════════════════════════════════════
+
+// New Project
+$('#btnNewProject').addEventListener('click', () => {
+  showModal('New Project', [
+    { key: 'name', label: 'Project Name', type: 'text', default: 'New Project' },
+  ], { name: 'New Project' }, (vals) => {
+    const p = store.createProject(vals.name || 'Untitled');
+    store.activeProjectId = p.id;
+    renderAll();
+  });
+});
+
+// Rename project from header
+$('#projNameInput').addEventListener('change', (e) => {
+  if (store.activeProjectId) {
+    store.renameProject(store.activeProjectId, e.target.value);
+    renderSidebar();
+  }
+});
+
+// Toolbar — add nodes
+$$('.tb-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!store.activeProjectId) return;
+    const type = btn.dataset.type;
+    const wrap = $('#canvas-wrap');
+    const x = 100 + Math.random() * (wrap.offsetWidth - 300);
+    const y = 80 + Math.random() * (wrap.offsetHeight - 200);
+    store.addNode(type, Math.round(x), Math.round(y));
+    renderCanvas();
+    updateLeadTime();
+  });
+});
+
+// Export
+$('#btnExport').addEventListener('click', () => {
+  const json = store.exportData();
+  const d = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `vsm-toc-export-${d}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// Import
+$('#fileImport').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    if (store.importData(ev.target.result)) {
+      store.activeProjectId = null;
+      store.selectedNodeId = null;
+      rightPanelMode = null;
+      renderAll();
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// Phase 2 toggle
+$('#btnPhase2').addEventListener('click', () => {
+  if (rightPanelMode === 'phase2') { rightPanelMode = null; $('#btnPhase2').classList.remove('active'); }
+  else { rightPanelMode = 'phase2'; $('#btnPhase2').classList.add('active'); $('#btnBA').classList.remove('active'); }
+  renderRightPanel();
+});
+
+// Before/After toggle
+$('#btnBA').addEventListener('click', () => {
+  if (rightPanelMode === 'ba') { rightPanelMode = null; $('#btnBA').classList.remove('active'); }
+  else { rightPanelMode = 'ba'; $('#btnBA').classList.add('active'); $('#btnPhase2').classList.remove('active'); }
+  renderRightPanel();
+});
+
+// Keyboard: Escape to deselect / close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = $('#modal-root .modal-overlay');
+    if (modal) { $('#modal-root').innerHTML = ''; return; }
+    if (connectSource) { connectSource = null; $('#connect-hint').style.display = 'none'; renderCanvas(); return; }
+    store.selectedNodeId = null;
+    if (rightPanelMode === 'props') rightPanelMode = null;
+    renderCanvas();
+    renderRightPanel();
+  }
+  // Delete key to remove selected node
+  if (e.key === 'Delete' && store.selectedNodeId && !$('#modal-root .modal-overlay')) {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+    deleteSelectedNode();
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+
+renderAll();
+</script>
+</body>
+</html>

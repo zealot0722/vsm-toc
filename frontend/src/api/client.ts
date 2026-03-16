@@ -59,4 +59,35 @@ export const api = {
         req(`/toc/edges/${edgeId}`, { method: 'DELETE' }),
     },
   },
+  // ── Phase 2 ──────────────────────────────────────────────────────────────
+  metrics: {
+    list: (projectId: number) => req(`/projects/${projectId}/metrics`),
+    create: (projectId: number, data: object) =>
+      req(`/projects/${projectId}/metrics`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (metricId: number, data: object) =>
+      req(`/metrics/${metricId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (metricId: number) =>
+      req(`/metrics/${metricId}`, { method: 'DELETE' }),
+  },
+  hypotheses: {
+    list: (projectId: number) => req(`/projects/${projectId}/hypotheses`),
+    create: (projectId: number, data: object) =>
+      req(`/projects/${projectId}/hypotheses`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (hypId: number, data: object) =>
+      req(`/hypotheses/${hypId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (hypId: number) =>
+      req(`/hypotheses/${hypId}`, { method: 'DELETE' }),
+  },
+  mechanisms: {
+    list: (projectId: number) => req(`/projects/${projectId}/mechanisms`),
+    create: (projectId: number, data: object) =>
+      req(`/projects/${projectId}/mechanisms`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (mechId: number, data: object) =>
+      req(`/mechanisms/${mechId}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (mechId: number) =>
+      req(`/mechanisms/${mechId}`, { method: 'DELETE' }),
+  },
+  constraintScores: {
+    get: (projectId: number) => req(`/projects/${projectId}/constraint-scores`),
+  },
 };

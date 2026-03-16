@@ -75,3 +75,64 @@ export interface TOCTreeEdge {
 }
 
 export type TOCTab = 'ec' | 'crt' | 'frt';
+
+// ── Phase 2 Types ───────────────────────────────────────────────────────────
+
+export interface NodeMetric {
+  id: number;
+  node_id: number;
+  metric_name: string;
+  current_value: number | null;
+  target_value: number | null;
+  unit: string;
+  source_type: string;
+  owner: string | null;
+  review_cycle: string | null;
+  notes: string | null;
+}
+
+export interface Hypothesis {
+  id: number;
+  project_id: number;
+  title: string;
+  suspected_constraint: string;
+  expected_effect: string;
+  validation_metrics: string;
+  observation_window: string;
+  status: 'draft' | 'running' | 'validated' | 'invalidated';
+  created_at: string;
+}
+
+export interface Mechanism {
+  id: number;
+  linked_toc_node_id: number | null;
+  project_id: number;
+  title: string;
+  trigger: string;
+  actor: string;
+  frequency: string;
+  input_rule: string | null;
+  output_rule: string | null;
+  exception_path: string | null;
+  escalation_rule: string | null;
+  sop_link: string | null;
+  backup_role: string | null;
+  owner: string | null;
+  health_status: 'normal' | 'abnormal' | 'stopped';
+  created_at: string;
+}
+
+export interface ConstraintScore {
+  node_id: number;
+  label: string;
+  scores: {
+    load_ratio: number;
+    backlog: number;
+    escalation: number;
+    quality_gap: number;
+    dependency_risk: number;
+  };
+  total: number;
+}
+
+export type Phase2Tab = 'constraint' | 'hypothesis' | 'mechanism';

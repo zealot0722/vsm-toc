@@ -159,3 +159,132 @@ class TOCEdgeOut(BaseModel):
     assumption: str
 
     model_config = {"from_attributes": True}
+
+
+# ── Node Metrics ─────────────────────────────────────────────────────────────
+
+class NodeMetricCreate(BaseModel):
+    node_id: int
+    metric_name: str
+    current_value: Optional[float] = None
+    target_value: Optional[float] = None
+    unit: str = ""
+    source_type: str = "estimated"
+    owner: Optional[str] = None
+    review_cycle: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class NodeMetricUpdate(BaseModel):
+    metric_name: Optional[str] = None
+    current_value: Optional[float] = None
+    target_value: Optional[float] = None
+    unit: Optional[str] = None
+    source_type: Optional[str] = None
+    owner: Optional[str] = None
+    review_cycle: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class NodeMetricOut(BaseModel):
+    id: int
+    node_id: int
+    metric_name: str
+    current_value: Optional[float] = None
+    target_value: Optional[float] = None
+    unit: str
+    source_type: str
+    owner: Optional[str] = None
+    review_cycle: Optional[str] = None
+    notes: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ── Hypotheses ───────────────────────────────────────────────────────────────
+
+class HypothesisCreate(BaseModel):
+    title: str
+    suspected_constraint: str = ""
+    expected_effect: str = ""
+    validation_metrics: str = "[]"
+    observation_window: str = "14 days"
+    status: str = "draft"
+
+
+class HypothesisUpdate(BaseModel):
+    title: Optional[str] = None
+    suspected_constraint: Optional[str] = None
+    expected_effect: Optional[str] = None
+    validation_metrics: Optional[str] = None
+    observation_window: Optional[str] = None
+    status: Optional[str] = None
+
+
+class HypothesisOut(BaseModel):
+    id: int
+    project_id: int
+    title: str
+    suspected_constraint: str
+    expected_effect: str
+    validation_metrics: str
+    observation_window: str
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Mechanisms ───────────────────────────────────────────────────────────────
+
+class MechanismCreate(BaseModel):
+    linked_toc_node_id: Optional[int] = None
+    title: str
+    trigger: str = ""
+    actor: str = ""
+    frequency: str = ""
+    input_rule: Optional[str] = None
+    output_rule: Optional[str] = None
+    exception_path: Optional[str] = None
+    escalation_rule: Optional[str] = None
+    sop_link: Optional[str] = None
+    backup_role: Optional[str] = None
+    owner: Optional[str] = None
+    health_status: str = "normal"
+
+
+class MechanismUpdate(BaseModel):
+    linked_toc_node_id: Optional[int] = None
+    title: Optional[str] = None
+    trigger: Optional[str] = None
+    actor: Optional[str] = None
+    frequency: Optional[str] = None
+    input_rule: Optional[str] = None
+    output_rule: Optional[str] = None
+    exception_path: Optional[str] = None
+    escalation_rule: Optional[str] = None
+    sop_link: Optional[str] = None
+    backup_role: Optional[str] = None
+    owner: Optional[str] = None
+    health_status: Optional[str] = None
+
+
+class MechanismOut(BaseModel):
+    id: int
+    linked_toc_node_id: Optional[int] = None
+    project_id: int
+    title: str
+    trigger: str
+    actor: str
+    frequency: str
+    input_rule: Optional[str] = None
+    output_rule: Optional[str] = None
+    exception_path: Optional[str] = None
+    escalation_rule: Optional[str] = None
+    sop_link: Optional[str] = None
+    backup_role: Optional[str] = None
+    owner: Optional[str] = None
+    health_status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

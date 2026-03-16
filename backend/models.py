@@ -90,3 +90,53 @@ class TOCEdge(Base):
     assumption = Column(Text, default="")
 
     analysis = relationship("TOCAnalysis", back_populates="toc_edges")
+
+
+class NodeMetric(Base):
+    __tablename__ = "node_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    node_id = Column(Integer, ForeignKey("vsm_nodes.id"), nullable=False)
+    metric_name = Column(String, nullable=False)
+    current_value = Column(Float, nullable=True)
+    target_value = Column(Float, nullable=True)
+    unit = Column(String, default="")
+    source_type = Column(String, default="estimated")  # measured | estimated | assumed
+    owner = Column(String, nullable=True)
+    review_cycle = Column(String, nullable=True)  # daily | weekly | monthly
+    notes = Column(String, nullable=True)
+
+
+class Hypothesis(Base):
+    __tablename__ = "hypotheses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    title = Column(String, nullable=False)
+    suspected_constraint = Column(String, default="")
+    expected_effect = Column(String, default="")
+    validation_metrics = Column(String, default="[]")  # JSON array stored as string
+    observation_window = Column(String, default="14 days")
+    status = Column(String, default="draft")  # draft | running | validated | invalidated
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Mechanism(Base):
+    __tablename__ = "mechanisms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    linked_toc_node_id = Column(Integer, nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    title = Column(String, nullable=False)
+    trigger = Column(String, default="")
+    actor = Column(String, default="")
+    frequency = Column(String, default="")
+    input_rule = Column(String, nullable=True)
+    output_rule = Column(String, nullable=True)
+    exception_path = Column(String, nullable=True)
+    escalation_rule = Column(String, nullable=True)
+    sop_link = Column(String, nullable=True)
+    backup_role = Column(String, nullable=True)
+    owner = Column(String, nullable=True)
+    health_status = Column(String, default="normal")  # normal | abnormal | stopped
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

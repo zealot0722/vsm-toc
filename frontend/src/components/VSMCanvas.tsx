@@ -22,7 +22,10 @@ import { InventoryNode } from './nodes/InventoryNode';
 import { CustomerNode }  from './nodes/CustomerNode';
 import { InfoFlowNode }  from './nodes/InfoFlowNode';
 import { TOCPanel }      from './panels/TOCPanel';
-import type { NodeType, VSMNodeData, ProcessProperties } from '../types';
+import { Phase2Panel }   from './panels/Phase2Panel';
+import { BeforeAfterPanel } from './panels/BeforeAfterPanel';
+import type { NodeType, VSMNodeData, ProcessProperties, NodeMetric } from '../types';
+import { api } from '../api/client';
 import './VSMCanvas.css';
 
 const NODE_TYPES: NodeTypes = {
@@ -99,13 +102,22 @@ interface VSMCanvasProps {
   nodeIdMap: Map<string, number>;
 }
 
-export function VSMCanvas({ projectId: _projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) {
+export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
   const [selectedBottleneckNode, setSelectedBottleneckNode] = useState<FlowNode | null>(null);
   const [showTOC, setShowTOC] = useState(false);
+  const [showPhase2, setShowPhase2] = useState(false);
+  const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [editingNode, setEditingNode] = useState<FlowNode | null>(null);
+  const [nodeMetrics, setNodeMetrics] = useState<NodeMetric[]>([]);
   const nodeCounter = useRef(INITIAL_NODES.length + 1);
+
+  // Load node metrics when project is available
+  useEffect(() => {
+    if (!projectId) return;
+    api.metrics.list(projectId).then((data) => setNodeMetrics(data as NodeMetric[])).catch(() => {});
+  }, [projectId]);
 
   const cycleTimes = nodes.map(n => n.data.properties?.cycleTime ?? 0).join(',');
   useEffect(() => {
@@ -146,7 +158,19 @@ export function VSMCanvas({ projectId: _projectId, nodeIdMap: _nodeIdMap }: VSMC
       data: { nodeType: type, ...defaults[type] } as VSMNodeData,
     };
     setNodes((nds) => [...nds, newNode]);
-  }, [setNodes]);
+
+    // Auto-create default metrics for process nodes
+    if (type === 'process' && projectId) {
+      const defaultMetrics = [
+        { node_id: Number(id), metric_name: 'cycle_time', unit: 'min', current_value: 30, target_value: 20, source_type: 'estimated' },
+        { node_id: Number(id), metric_name: 'backlog', unit: 'count', current_value: 10, target_value: 5, source_type: 'estimated' },
+        { node_id: Number(id), metric_name: 'escalation_rate', unit: '%', current_value: 5, target_value: 2, source_type: 'estimated' },
+      ];
+      for (const m of defaultMetrics) {
+        api.metrics.create(projectId, m).catch(() => {});
+      }
+    }
+  }, [setNodes, projectId]);
 
   useEffect(() => {
     (window as unknown as Record<string, unknown>).__vsmAddNode = addNode;
@@ -176,6 +200,13 @@ export function VSMCanvas({ projectId: _projectId, nodeIdMap: _nodeIdMap }: VSMC
 
     return { totalLeadTime, valueAddedTime, efficiency };
   }, [nodes]);
+
+  // Get metrics for a specific node (by flow ID matching)
+  const getNodeMetrics = useCallback((nodeId: string) => {
+    return nodeMetrics.filter(m => String(m.node_id) === nodeId);
+  }, [nodeMetrics]);
+
+  const rightPanelOpen = showTOC || showPhase2 || showBeforeAfter;
 
   return (
     <div className="vsm-canvas-wrapper">
@@ -208,12 +239,27 @@ export function VSMCanvas({ projectId: _projectId, nodeIdMap: _nodeIdMap }: VSMC
           }}
           maskColor="rgba(0,0,0,0.5)"
         />
-        <Panel position="top-right" style={{ marginRight: showTOC ? '390px' : '0', transition: 'margin 0.25s' }}>
+        <Panel position="top-right" style={{ marginRight: rightPanelOpen ? '410px' : '0', transition: 'margin 0.25s' }}>
           <div className="flow-stats">
             <span className="stat-label">Nodes</span>
             <span className="stat-value">{nodes.length}</span>
             <span className="stat-label">Process</span>
             <span className="stat-value">{nodes.filter(n => n.type === 'process').length}</span>
+            <div className="stat-divider" />
+            <button
+              className={`stat-toggle ${showPhase2 ? 'active' : ''}`}
+              onClick={() => { setShowPhase2(!showPhase2); setShowTOC(false); setShowBeforeAfter(false); }}
+              title="Phase 2 Analysis"
+            >
+              P2
+            </button>
+            <button
+              className={`stat-toggle ${showBeforeAfter ? 'active' : ''}`}
+              onClick={() => { setShowBeforeAfter(!showBeforeAfter); setShowTOC(false); setShowPhase2(false); }}
+              title="Before/After Comparison"
+            >
+              B/A
+            </button>
           </div>
         </Panel>
       </ReactFlow>
@@ -245,9 +291,24 @@ export function VSMCanvas({ projectId: _projectId, nodeIdMap: _nodeIdMap }: VSMC
         />
       )}
 
+      {showPhase2 && (
+        <Phase2Panel
+          projectId={projectId}
+          onClose={() => setShowPhase2(false)}
+        />
+      )}
+
+      {showBeforeAfter && (
+        <BeforeAfterPanel
+          projectId={projectId}
+          onClose={() => setShowBeforeAfter(false)}
+        />
+      )}
+
       {editingNode && editingNode.type === 'process' && (
         <NodeEditModal
           node={editingNode}
+          metrics={getNodeMetrics(editingNode.id)}
           onSave={(updated) => {
             setNodes((nds) => nds.map((n) => n.id === updated.id ? { ...n, data: updated.data } : n));
             setEditingNode(null);
@@ -261,11 +322,12 @@ export function VSMCanvas({ projectId: _projectId, nodeIdMap: _nodeIdMap }: VSMC
 
 interface NodeEditModalProps {
   node: FlowNode;
+  metrics: NodeMetric[];
   onSave: (node: FlowNode) => void;
   onClose: () => void;
 }
 
-function NodeEditModal({ node, onSave, onClose }: NodeEditModalProps) {
+function NodeEditModal({ node, metrics, onSave, onClose }: NodeEditModalProps) {
   const [label, setLabel] = useState(node.data.label);
   const [props, setProps] = useState<ProcessProperties>(
     node.data.properties ?? { cycleTime: 30, uptime: 90, shifts: 1, workers: 2, wip: 10 }
@@ -305,6 +367,33 @@ function NodeEditModal({ node, onSave, onClose }: NodeEditModalProps) {
               />
             </div>
           ))}
+
+          {metrics.length > 0 && (
+            <>
+              <div className="modal-metrics-divider" />
+              <div className="modal-metrics-title">Node Metrics</div>
+              {metrics.map((m) => {
+                const gap = m.current_value != null && m.target_value != null && m.target_value !== 0
+                  ? ((m.current_value - m.target_value) / Math.abs(m.target_value) * 100)
+                  : null;
+                return (
+                  <div key={m.id} className="metric-inline">
+                    <span className="metric-inline-name">{m.metric_name.replace(/_/g, ' ')}</span>
+                    <span className="metric-inline-values">
+                      <span>{m.current_value ?? '—'}</span>
+                      <span className="metric-arrow">→</span>
+                      <span className="metric-target">{m.target_value ?? '—'}</span>
+                      {gap !== null && (
+                        <span className={`metric-gap ${gap <= 0 ? 'good' : 'bad'}`}>
+                          {gap > 0 ? '+' : ''}{gap.toFixed(0)}%
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
         <div className="modal-actions">
           <button className="modal-btn cancel" onClick={onClose}>Cancel</button>

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
 import models  # noqa: F401 — registers all ORM models before create_all
-from routers import projects, toc
+from routers import projects, toc, phase2
 
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
@@ -24,6 +24,7 @@ app.add_middleware(
 
 app.include_router(projects.router)
 app.include_router(toc.router)
+app.include_router(phase2.router)
 
 
 @app.get("/health")

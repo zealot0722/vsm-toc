@@ -244,3 +244,103 @@
   height: 24px;
   background: #1e2d4d;
 }
+
+/* ── Phase 2 Toggle Buttons ──────────────────────────────────────────────── */
+
+.stat-divider {
+  width: 1px;
+  height: 16px;
+  background: #1e2d4d;
+  margin: 0 4px;
+}
+
+.stat-toggle {
+  background: #0d1225;
+  border: 1px solid #2a2a42;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  color: #5a7aaa;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.03em;
+}
+
+.stat-toggle:hover {
+  background: #1a1a35;
+  color: #7a9acc;
+}
+
+.stat-toggle.active {
+  background: #1e3a8a;
+  border-color: #2d5aaa;
+  color: #a0c0ff;
+}
+
+/* ── Inline Node Metrics (in Edit Modal) ─────────────────────────────────── */
+
+.modal-metrics-divider {
+  height: 1px;
+  background: #2a2a42;
+  margin: 6px 0;
+}
+
+.modal-metrics-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a7aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.metric-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.metric-inline-name {
+  color: #7a9acc;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.metric-inline-values {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #c0cce8;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-arrow {
+  color: #3a5070;
+  font-size: 11px;
+}
+
+.metric-target {
+  color: #88d8b0;
+}
+
+.metric-gap {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.metric-gap.good {
+  color: #88d8b0;
+  background: rgba(136, 216, 176, 0.1);
+}
+
+.metric-gap.bad {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
