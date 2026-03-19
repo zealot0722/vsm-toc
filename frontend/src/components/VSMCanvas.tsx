@@ -41,35 +41,35 @@ type FlowNode = Node<VSMNodeData>;
 const INITIAL_NODES: FlowNode[] = [
   {
     id: '1', type: 'supplier', position: { x: 60, y: 200 },
-    data: { label: 'Supplier', nodeType: 'supplier' },
+    data: { label: '供應商', nodeType: 'supplier' },
   },
   {
     id: '2', type: 'process', position: { x: 260, y: 180 },
-    data: { label: 'Cutting', nodeType: 'process',
+    data: { label: '裁切', nodeType: 'process',
       properties: { cycleTime: 45, uptime: 90, shifts: 2, workers: 3, wip: 20 } },
   },
   {
     id: '3', type: 'inventory', position: { x: 460, y: 220 },
-    data: { label: 'WIP Buffer', nodeType: 'inventory',
+    data: { label: '在製品緩衝', nodeType: 'inventory',
       properties: { cycleTime: 0, uptime: 100, shifts: 1, workers: 0, wip: 50 } },
   },
   {
     id: '4', type: 'process', position: { x: 580, y: 180 },
-    data: { label: 'Welding', nodeType: 'process',
+    data: { label: '焊接', nodeType: 'process',
       properties: { cycleTime: 120, uptime: 85, shifts: 2, workers: 5, wip: 35 } },
   },
   {
     id: '5', type: 'process', position: { x: 800, y: 180 },
-    data: { label: 'Assembly', nodeType: 'process',
+    data: { label: '組裝', nodeType: 'process',
       properties: { cycleTime: 60, uptime: 95, shifts: 2, workers: 4, wip: 15 } },
   },
   {
     id: '6', type: 'customer', position: { x: 1020, y: 200 },
-    data: { label: 'Customer', nodeType: 'customer' },
+    data: { label: '客戶', nodeType: 'customer' },
   },
   {
     id: '7', type: 'infoflow', position: { x: 500, y: 60 },
-    data: { label: 'Production Schedule', nodeType: 'infoflow' },
+    data: { label: '生產排程', nodeType: 'infoflow' },
   },
 ];
 
@@ -146,11 +146,11 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
   const addNode = useCallback((type: NodeType) => {
     const id = String(++nodeCounter.current);
     const defaults: Record<NodeType, Partial<VSMNodeData>> = {
-      supplier:  { label: 'Supplier' },
-      process:   { label: 'New Process', properties: { cycleTime: 30, uptime: 90, shifts: 1, workers: 2, wip: 10 } },
-      inventory: { label: 'Inventory', properties: { cycleTime: 0, uptime: 100, shifts: 1, workers: 0, wip: 0 } },
-      customer:  { label: 'Customer' },
-      infoflow:  { label: 'Info Flow' },
+      supplier:  { label: '供應商' },
+      process:   { label: '新製程站', properties: { cycleTime: 30, uptime: 90, shifts: 1, workers: 2, wip: 10 } },
+      inventory: { label: '在製品庫存', properties: { cycleTime: 0, uptime: 100, shifts: 1, workers: 0, wip: 0 } },
+      customer:  { label: '客戶' },
+      infoflow:  { label: '資訊流' },
     };
     const newNode: FlowNode = {
       id, type,
@@ -241,24 +241,24 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
         />
         <Panel position="top-right" style={{ marginRight: rightPanelOpen ? '410px' : '0', transition: 'margin 0.25s' }}>
           <div className="flow-stats">
-            <span className="stat-label">Nodes</span>
+            <span className="stat-label">節點數</span>
             <span className="stat-value">{nodes.length}</span>
-            <span className="stat-label">Process</span>
+            <span className="stat-label">製程站</span>
             <span className="stat-value">{nodes.filter(n => n.type === 'process').length}</span>
             <div className="stat-divider" />
             <button
               className={`stat-toggle ${showPhase2 ? 'active' : ''}`}
               onClick={() => { setShowPhase2(!showPhase2); setShowTOC(false); setShowBeforeAfter(false); }}
-              title="Phase 2 Analysis"
+              title="第二階段分析"
             >
               P2
             </button>
             <button
               className={`stat-toggle ${showBeforeAfter ? 'active' : ''}`}
               onClick={() => { setShowBeforeAfter(!showBeforeAfter); setShowTOC(false); setShowPhase2(false); }}
-              title="Before/After Comparison"
+              title="改善前後比較"
             >
-              B/A
+              前後
             </button>
           </div>
         </Panel>
@@ -266,17 +266,17 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
 
       <div className="lead-time-bar">
         <div className="lt-metric">
-          <span className="lt-label">Total Lead Time</span>
+          <span className="lt-label">總前置時間</span>
           <span className="lt-value">{leadTimeMetrics.totalLeadTime}s</span>
         </div>
         <div className="lt-divider" />
         <div className="lt-metric">
-          <span className="lt-label">Value-Added Time</span>
+          <span className="lt-label">增值時間</span>
           <span className="lt-value lt-va">{leadTimeMetrics.valueAddedTime}s</span>
         </div>
         <div className="lt-divider" />
         <div className="lt-metric">
-          <span className="lt-label">Process Efficiency</span>
+          <span className="lt-label">流程效率（PCE）</span>
           <span className={`lt-value ${leadTimeMetrics.efficiency < 25 ? 'lt-low' : leadTimeMetrics.efficiency < 50 ? 'lt-mid' : 'lt-high'}`}>
             {leadTimeMetrics.efficiency.toFixed(1)}%
           </span>
@@ -340,21 +340,21 @@ function NodeEditModal({ node, metrics, onSave, onClose }: NodeEditModalProps) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span>Edit Process Node</span>
+          <span>編輯製程站</span>
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
           <div className="form-group">
-            <label>Label</label>
+            <label>名稱</label>
             <input value={label} onChange={(e) => setLabel(e.target.value)} />
           </div>
           {(
             [
-              ['cycleTime', 'Cycle Time (s)'],
-              ['uptime', 'Uptime (%)'],
-              ['shifts', 'Shifts'],
-              ['workers', 'Workers'],
-              ['wip', 'WIP'],
+              ['cycleTime', 'C/T 週期時間（秒）'],
+              ['uptime', '稼動率（%）'],
+              ['shifts', '班次數'],
+              ['workers', '作業人數'],
+              ['wip', '在製品數（WIP）'],
             ] as [keyof ProcessProperties, string][]
           ).map(([key, lbl]) => (
             <div className="form-group" key={key}>
@@ -371,7 +371,7 @@ function NodeEditModal({ node, metrics, onSave, onClose }: NodeEditModalProps) {
           {metrics.length > 0 && (
             <>
               <div className="modal-metrics-divider" />
-              <div className="modal-metrics-title">Node Metrics</div>
+              <div className="modal-metrics-title">製程站績效指標</div>
               {metrics.map((m) => {
                 const gap = m.current_value != null && m.target_value != null && m.target_value !== 0
                   ? ((m.current_value - m.target_value) / Math.abs(m.target_value) * 100)
@@ -396,12 +396,12 @@ function NodeEditModal({ node, metrics, onSave, onClose }: NodeEditModalProps) {
           )}
         </div>
         <div className="modal-actions">
-          <button className="modal-btn cancel" onClick={onClose}>Cancel</button>
+          <button className="modal-btn cancel" onClick={onClose}>取消</button>
           <button
             className="modal-btn save"
             onClick={() => onSave({ ...node, data: { ...node.data, label, properties: props } })}
           >
-            Update
+            更新
           </button>
         </div>
       </div>

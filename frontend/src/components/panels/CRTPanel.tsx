@@ -37,9 +37,9 @@ interface CRTNodeData extends Record<string, unknown> {
 function CRTNodeComponent({ data }: NodeProps<Node<CRTNodeData>>) {
   const colors = NODE_COLORS[data.tocNodeType] ?? NODE_COLORS.symptom;
   const typeLabels: Record<string, string> = {
-    symptom: 'Symptom',
-    'intermediate-cause': 'Intermediate',
-    'core-constraint': 'Core Constraint',
+    symptom: '非理想效果（UDE）',
+    'intermediate-cause': '中間因果',
+    'core-constraint': '核心制約',
   };
   return (
     <div
@@ -62,7 +62,7 @@ function CRTNodeComponent({ data }: NodeProps<Node<CRTNodeData>>) {
       </div>
       {data.isCoreConstraint && (
         <div style={{ fontSize: 9, color: '#ffaa50', marginTop: 4, fontWeight: 700 }}>
-          CORE CONSTRAINT
+          ★ 核心制約
         </div>
       )}
       <Handle type="source" position={Position.Bottom} style={{ background: colors.border }} />
@@ -232,10 +232,10 @@ export function CRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: CRTPanelP
         analysis_id: aId,
         type: addingType,
         label: addingType === 'symptom'
-          ? 'New Symptom'
+          ? '新 UDE'
           : addingType === 'core-constraint'
-            ? 'Core Constraint'
-            : 'Intermediate Cause',
+            ? '核心制約'
+            : '中間因果',
         x: 100 + Math.random() * 200,
         y: addingType === 'symptom' ? 50 : 200 + Math.random() * 150,
       }) as TOCTreeNode;
@@ -253,9 +253,9 @@ export function CRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: CRTPanelP
   }, [addingType, setNodes, ensureAnalysis]);
 
   const typeButtons: { type: TOCNodeType; label: string; color: string }[] = [
-    { type: 'symptom', label: 'Symptom', color: '#8b3030' },
-    { type: 'intermediate-cause', label: 'Intermediate', color: '#8b7a30' },
-    { type: 'core-constraint', label: 'Core', color: '#aa6020' },
+    { type: 'symptom', label: 'UDE（非理想效果）', color: '#8b3030' },
+    { type: 'intermediate-cause', label: '中間因果', color: '#8b7a30' },
+    { type: 'core-constraint', label: '核心制約', color: '#aa6020' },
   ];
 
   return (
@@ -275,12 +275,12 @@ export function CRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: CRTPanelP
           ))}
         </div>
         <button className="tree-add-btn" onClick={addNode}>
-          + Add Node
+          + 新增節點
         </button>
       </div>
 
       <div className="tree-hint">
-        IF cause THEN effect. Connect nodes bottom-to-top. Core constraints auto-detect where branches converge.
+        因果邏輯：下方原因 → 上方結果。核心制約為多條 UDE 分支的交匯根源，系統自動標記。
       </div>
 
       <div className="tree-canvas">

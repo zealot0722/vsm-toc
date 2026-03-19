@@ -82,19 +82,19 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
   };
 
   const SCORE_LABELS: Record<string, string> = {
-    load_ratio: 'Load Ratio',
-    backlog: 'Backlog',
-    escalation: 'Escalation',
-    quality_gap: 'Quality Gap',
-    dependency_risk: 'Dependency',
+    load_ratio: '負荷率',
+    backlog: '待處理積壓',
+    escalation: '異常升報率',
+    quality_gap: '品質落差',
+    dependency_risk: '相依制約風險',
   };
 
   return (
     <div className="p2-panel">
       <div className="p2-header">
         <div>
-          <div className="p2-title">Phase 2 Analysis</div>
-          <div className="p2-subtitle">Constraint · Hypothesis · Mechanism</div>
+          <div className="p2-title">制約深度分析</div>
+          <div className="p2-subtitle">制約評估 · 改善假說 · 管控機制</div>
         </div>
         <button className="close-btn" onClick={onClose}>✕</button>
       </div>
@@ -106,7 +106,7 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
             className={`p2-tab ${tab === t ? 'active' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'constraint' ? 'Constraint Score' : t === 'hypothesis' ? 'Hypothesis' : 'Mechanism'}
+            {t === 'constraint' ? '制約評估' : t === 'hypothesis' ? '改善假說' : '管控機制'}
           </button>
         ))}
       </div>
@@ -115,8 +115,8 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
         {/* ── Constraint Score Tab ─────────────────────────────────────────── */}
         {tab === 'constraint' && (
           <div className="p2-scores">
-            {!projectId && <div className="p2-empty">Save project first to view scores</div>}
-            {projectId && scores.length === 0 && <div className="p2-empty">No process nodes found</div>}
+            {!projectId && <div className="p2-empty">請先儲存專案以計算制約評估分數</div>}
+            {projectId && scores.length === 0 && <div className="p2-empty">尚無製程站資料</div>}
             {scores.map((s) => (
               <div key={s.node_id} className="score-card">
                 <div className="score-header">
@@ -149,7 +149,7 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
         {tab === 'hypothesis' && (
           <div className="p2-list">
             <button className="p2-add-btn" onClick={() => setEditingHyp({ title: '', status: 'draft' })}>
-              + Add Hypothesis
+              + 新增改善假說
             </button>
             {hypotheses.map((h) => (
               <div key={h.id} className="p2-card">
@@ -161,27 +161,27 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
                 </div>
                 {h.suspected_constraint && (
                   <div className="p2-card-field">
-                    <span className="p2-field-label">Constraint</span>
+                    <span className="p2-field-label">疑似制約因素</span>
                     <span>{h.suspected_constraint}</span>
                   </div>
                 )}
                 {h.expected_effect && (
                   <div className="p2-card-field">
-                    <span className="p2-field-label">Expected Effect</span>
+                    <span className="p2-field-label">預期效果</span>
                     <span>{h.expected_effect}</span>
                   </div>
                 )}
                 <div className="p2-card-field">
-                  <span className="p2-field-label">Window</span>
+                  <span className="p2-field-label">觀察窗口</span>
                   <span>{h.observation_window}</span>
                 </div>
                 <div className="p2-card-actions">
-                  <button onClick={() => setEditingHyp(h)}>Edit</button>
-                  <button className="danger" onClick={() => deleteHypothesis(h.id)}>Delete</button>
+                  <button onClick={() => setEditingHyp(h)}>編輯</button>
+                  <button className="danger" onClick={() => deleteHypothesis(h.id)}>刪除</button>
                 </div>
               </div>
             ))}
-            {hypotheses.length === 0 && <div className="p2-empty">No hypotheses yet</div>}
+            {hypotheses.length === 0 && <div className="p2-empty">尚未建立改善假說</div>}
           </div>
         )}
 
@@ -189,7 +189,7 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
         {tab === 'mechanism' && (
           <div className="p2-list">
             <button className="p2-add-btn" onClick={() => setEditingMech({ title: '', health_status: 'normal' })}>
-              + Add Mechanism
+              + 新增管控機制
             </button>
             {mechanisms.map((m) => (
               <div key={m.id} className="p2-card">
@@ -199,35 +199,35 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
                 </div>
                 {m.trigger && (
                   <div className="p2-card-field">
-                    <span className="p2-field-label">Trigger</span>
+                    <span className="p2-field-label">觸發條件</span>
                     <span>{m.trigger}</span>
                   </div>
                 )}
                 {m.actor && (
                   <div className="p2-card-field">
-                    <span className="p2-field-label">Actor</span>
+                    <span className="p2-field-label">執行者</span>
                     <span>{m.actor}</span>
                   </div>
                 )}
                 {m.frequency && (
                   <div className="p2-card-field">
-                    <span className="p2-field-label">Frequency</span>
+                    <span className="p2-field-label">頻率</span>
                     <span>{m.frequency}</span>
                   </div>
                 )}
                 {m.owner && (
                   <div className="p2-card-field">
-                    <span className="p2-field-label">Owner</span>
+                    <span className="p2-field-label">負責人</span>
                     <span>{m.owner}</span>
                   </div>
                 )}
                 <div className="p2-card-actions">
-                  <button onClick={() => setEditingMech(m)}>Edit</button>
-                  <button className="danger" onClick={() => deleteMechanism(m.id)}>Delete</button>
+                  <button onClick={() => setEditingMech(m)}>編輯</button>
+                  <button className="danger" onClick={() => deleteMechanism(m.id)}>刪除</button>
                 </div>
               </div>
             ))}
-            {mechanisms.length === 0 && <div className="p2-empty">No mechanisms yet</div>}
+            {mechanisms.length === 0 && <div className="p2-empty">尚未建立管控機制</div>}
           </div>
         )}
       </div>
@@ -237,43 +237,43 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
         <div className="modal-overlay" onClick={() => setEditingHyp(null)}>
           <div className="modal-box p2-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span>{editingHyp.id ? 'Edit' : 'New'} Hypothesis</span>
+              <span>{editingHyp.id ? '編輯' : '新增'}改善假說</span>
               <button className="close-btn" onClick={() => setEditingHyp(null)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Title</label>
+                <label>標題</label>
                 <input value={editingHyp.title ?? ''} onChange={(e) => setEditingHyp({ ...editingHyp, title: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Suspected Constraint</label>
+                <label>疑似制約因素</label>
                 <input value={editingHyp.suspected_constraint ?? ''} onChange={(e) => setEditingHyp({ ...editingHyp, suspected_constraint: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Expected Effect</label>
+                <label>預期效果</label>
                 <input value={editingHyp.expected_effect ?? ''} onChange={(e) => setEditingHyp({ ...editingHyp, expected_effect: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Observation Window</label>
-                <input value={editingHyp.observation_window ?? '14 days'} onChange={(e) => setEditingHyp({ ...editingHyp, observation_window: e.target.value })} />
+                <label>觀察窗口</label>
+                <input value={editingHyp.observation_window ?? '14 天'} onChange={(e) => setEditingHyp({ ...editingHyp, observation_window: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Status</label>
+                <label>狀態</label>
                 <select
                   className="p2-select"
                   value={editingHyp.status ?? 'draft'}
                   onChange={(e) => setEditingHyp({ ...editingHyp, status: e.target.value as Hypothesis['status'] })}
                 >
-                  <option value="draft">Draft</option>
-                  <option value="running">Running</option>
-                  <option value="validated">Validated</option>
-                  <option value="invalidated">Invalidated</option>
+                  <option value="draft">草擬中</option>
+                  <option value="running">驗證進行中</option>
+                  <option value="validated">已確認有效</option>
+                  <option value="invalidated">已推翻否定</option>
                 </select>
               </div>
             </div>
             <div className="modal-actions">
-              <button className="modal-btn cancel" onClick={() => setEditingHyp(null)}>Cancel</button>
-              <button className="modal-btn save" onClick={saveHypothesis}>Save</button>
+              <button className="modal-btn cancel" onClick={() => setEditingHyp(null)}>取消</button>
+              <button className="modal-btn save" onClick={saveHypothesis}>儲存</button>
             </div>
           </div>
         </div>
@@ -284,62 +284,62 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
         <div className="modal-overlay" onClick={() => setEditingMech(null)}>
           <div className="modal-box p2-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span>{editingMech.id ? 'Edit' : 'New'} Mechanism</span>
+              <span>{editingMech.id ? '編輯' : '新增'}管控機制</span>
               <button className="close-btn" onClick={() => setEditingMech(null)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Title</label>
+                <label>標題</label>
                 <input value={editingMech.title ?? ''} onChange={(e) => setEditingMech({ ...editingMech, title: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Trigger</label>
+                <label>觸發條件</label>
                 <input value={editingMech.trigger ?? ''} onChange={(e) => setEditingMech({ ...editingMech, trigger: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Actor</label>
+                <label>執行者</label>
                 <input value={editingMech.actor ?? ''} onChange={(e) => setEditingMech({ ...editingMech, actor: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Frequency</label>
+                <label>頻率</label>
                 <input value={editingMech.frequency ?? ''} onChange={(e) => setEditingMech({ ...editingMech, frequency: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Owner</label>
+                <label>負責人</label>
                 <input value={editingMech.owner ?? ''} onChange={(e) => setEditingMech({ ...editingMech, owner: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Input Rule</label>
+                <label>輸入規則</label>
                 <input value={editingMech.input_rule ?? ''} onChange={(e) => setEditingMech({ ...editingMech, input_rule: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Output Rule</label>
+                <label>輸出規則</label>
                 <input value={editingMech.output_rule ?? ''} onChange={(e) => setEditingMech({ ...editingMech, output_rule: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Exception Path</label>
+                <label>例外處理路徑</label>
                 <input value={editingMech.exception_path ?? ''} onChange={(e) => setEditingMech({ ...editingMech, exception_path: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Escalation Rule</label>
+                <label>升級規則</label>
                 <input value={editingMech.escalation_rule ?? ''} onChange={(e) => setEditingMech({ ...editingMech, escalation_rule: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Health Status</label>
+                <label>運作狀態</label>
                 <select
                   className="p2-select"
                   value={editingMech.health_status ?? 'normal'}
                   onChange={(e) => setEditingMech({ ...editingMech, health_status: e.target.value as Mechanism['health_status'] })}
                 >
-                  <option value="normal">Normal</option>
-                  <option value="abnormal">Abnormal</option>
-                  <option value="stopped">Stopped</option>
+                  <option value="normal">正常運作</option>
+                  <option value="abnormal">異常警示</option>
+                  <option value="stopped">已中止</option>
                 </select>
               </div>
             </div>
             <div className="modal-actions">
-              <button className="modal-btn cancel" onClick={() => setEditingMech(null)}>Cancel</button>
-              <button className="modal-btn save" onClick={saveMechanism}>Save</button>
+              <button className="modal-btn cancel" onClick={() => setEditingMech(null)}>取消</button>
+              <button className="modal-btn save" onClick={saveMechanism}>儲存</button>
             </div>
           </div>
         </div>

@@ -59,27 +59,35 @@ export function BeforeAfterPanel({ projectId, onClose }: BeforeAfterPanelProps) 
     };
   };
 
+  const METRIC_LABELS: Record<string, string> = {
+    cycle_time: 'C/T 週期時間',
+    backlog: '待處理積壓',
+    escalation_rate: '異常升報率',
+    uptime: '稼動率',
+    wip: '在製品數（WIP）',
+  };
+
   return (
     <div className="ba-panel">
       <div className="ba-header">
         <div>
-          <div className="ba-title">Before / After</div>
-          <div className="ba-subtitle">Metric comparison</div>
+          <div className="ba-title">改善前後對比</div>
+          <div className="ba-subtitle">VSM 績效指標變化</div>
         </div>
         <button className="close-btn" onClick={onClose}>✕</button>
       </div>
 
       <div className="ba-body">
-        {!projectId && <div className="ba-empty">Save project first</div>}
-        {projectId && rows.length === 0 && <div className="ba-empty">No metrics to compare</div>}
+        {!projectId && <div className="ba-empty">請先儲存專案</div>}
+        {projectId && rows.length === 0 && <div className="ba-empty">尚無可比較的指標</div>}
         {rows.length > 0 && (
           <table className="ba-table">
             <thead>
               <tr>
-                <th>Metric</th>
-                <th>Before</th>
-                <th>After</th>
-                <th>Trend</th>
+                <th>指標</th>
+                <th>改善前</th>
+                <th>改善後</th>
+                <th>趨勢</th>
               </tr>
             </thead>
             <tbody>
@@ -88,7 +96,7 @@ export function BeforeAfterPanel({ projectId, onClose }: BeforeAfterPanelProps) 
                 return (
                   <tr key={r.metric_name}>
                     <td className="ba-metric-name">
-                      {r.metric_name.replace(/_/g, ' ')}
+                      {METRIC_LABELS[r.metric_name] ?? r.metric_name.replace(/_/g, ' ')}
                       {r.unit && <span className="ba-unit"> ({r.unit})</span>}
                     </td>
                     <td className="ba-val">{r.before ?? '—'}</td>

@@ -93,16 +93,16 @@ export function TOCPanel({ node, apiNodeId, onClose }: TOCPanelProps) {
   const handleFrtCreated = useCallback((id: number) => setFrtAnalysisId(id), []);
 
   const tabs: { key: TOCTab; label: string }[] = [
-    { key: 'ec', label: 'Evaporating Cloud' },
-    { key: 'crt', label: 'Current Reality Tree' },
-    { key: 'frt', label: 'Future Reality Tree' },
+    { key: 'ec', label: '蒸發雲（EC）' },
+    { key: 'crt', label: '現況樹（CRT）' },
+    { key: 'frt', label: '未來樹（FRT）' },
   ];
 
   return (
     <div className={`toc-panel ${activeTab !== 'ec' ? 'toc-panel-wide' : ''}`}>
       <div className="toc-panel-header">
         <div>
-          <div className="toc-panel-title">TOC Analysis</div>
+          <div className="toc-panel-title">TOC 分析</div>
           <div className="toc-panel-subtitle">{node.data.label}</div>
         </div>
         <button className="close-btn" onClick={onClose}>✕</button>
@@ -127,96 +127,96 @@ export function TOCPanel({ node, apiNodeId, onClose }: TOCPanelProps) {
           </div>
 
           <div className="ec-form">
-            <h4 className="form-section-title">Cloud Components</h4>
+            <h4 className="form-section-title">蒸發雲結構要素</h4>
 
             <div className="form-group">
-              <label>Goal (Common Objective)</label>
+              <label>共同目標（Goal）</label>
               <input
                 value={ec.goal}
                 onChange={(e) => handleChange('goal', e.target.value)}
-                placeholder="What both sides want to achieve..."
+                placeholder="雙方共同追求的系統目標..."
               />
             </div>
 
             <div className="form-group">
-              <label>Need A</label>
+              <label>需求 A（Need A）</label>
               <input
                 value={ec.needA}
                 onChange={(e) => handleChange('needA', e.target.value)}
-                placeholder="Requirement to achieve the goal..."
+                placeholder="達成目標的必要需求 A..."
               />
             </div>
 
             <div className="form-group assumption-group">
               <label className="assumption-label">
-                <span className="assumption-tag">Assumption</span>
+                <span className="assumption-tag">潛在假設</span>
                 <input
                   value={ec.assumptionAPrereqA}
                   onChange={(e) => handleChange('assumptionAPrereqA', e.target.value)}
-                  placeholder="Why Prereq A satisfies Need A..."
+                  placeholder="行動 A 能滿足需求 A 的潛在假設..."
                   className="assumption-input"
                 />
               </label>
             </div>
 
             <div className="form-group">
-              <label>Prerequisite A</label>
+              <label>行動 A（Action A）</label>
               <input
                 value={ec.prereqA}
                 onChange={(e) => handleChange('prereqA', e.target.value)}
-                placeholder="Action needed for Need A..."
+                placeholder="滿足需求 A 所採取的行動..."
               />
             </div>
 
             <div className="form-divider" />
 
             <div className="form-group">
-              <label>Need B</label>
+              <label>需求 B（Need B）</label>
               <input
                 value={ec.needB}
                 onChange={(e) => handleChange('needB', e.target.value)}
-                placeholder="Conflicting requirement..."
+                placeholder="達成目標的必要需求 B（與 A 存在衝突）..."
               />
             </div>
 
             <div className="form-group assumption-group">
               <label className="assumption-label">
-                <span className="assumption-tag">Assumption</span>
+                <span className="assumption-tag">潛在假設</span>
                 <input
                   value={ec.assumptionBPrereqB}
                   onChange={(e) => handleChange('assumptionBPrereqB', e.target.value)}
-                  placeholder="Why Prereq B satisfies Need B..."
+                  placeholder="行動 B 能滿足需求 B 的潛在假設..."
                   className="assumption-input"
                 />
               </label>
             </div>
 
             <div className="form-group">
-              <label>Prerequisite B</label>
+              <label>行動 B（Action B）</label>
               <input
                 value={ec.prereqB}
                 onChange={(e) => handleChange('prereqB', e.target.value)}
-                placeholder="Action needed for Need B (conflicts with A)..."
+                placeholder="滿足需求 B 所採取的行動（與行動 A 衝突）..."
               />
             </div>
 
             <div className="form-divider" />
 
             <div className="form-group">
-              <label>Conflict Assumption (A-B)</label>
+              <label>衝突假設（A vs B）</label>
               <input
                 value={ec.assumptionAB}
                 onChange={(e) => handleChange('assumptionAB', e.target.value)}
-                placeholder="Why A and B seem mutually exclusive..."
+                placeholder="使行動 A 與行動 B 無法並存的潛在假設..."
               />
             </div>
 
             <div className="form-group">
-              <label>Broken Assumption (to evaporate cloud)</label>
+              <label>突破假設（解除衝突）</label>
               <textarea
                 value={ec.brokenAssumption}
                 onChange={(e) => handleChange('brokenAssumption', e.target.value)}
-                placeholder="Which assumption can be challenged or invalidated?"
+                placeholder="哪個潛在假設可被挑戰或推翻，從而消解衝突？"
                 rows={3}
               />
             </div>
@@ -227,7 +227,7 @@ export function TOCPanel({ node, apiNodeId, onClose }: TOCPanelProps) {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? 'Saving...' : saved ? 'Saved' : 'Save Analysis'}
+                {saving ? '儲存中...' : saved ? '已儲存' : '儲存分析'}
               </button>
             </div>
           </div>
@@ -261,20 +261,20 @@ function ECDiagram({ ec }: { ec: Omit<ECAnalysis, 'id' | 'vsmNodeId'> }) {
   return (
     <div className="ec-visual">
       <div className="ec-row ec-row-top">
-        <div className="ec-box ec-need" title="Need A">{ec.needA || 'Need A'}</div>
+        <div className="ec-box ec-need" title="需求 A">{ec.needA || '需求 A'}</div>
         <div className="ec-arrow">-&gt;</div>
-        <div className="ec-box ec-prereq" title="Prereq A">{ec.prereqA || 'Prereq A'}</div>
+        <div className="ec-box ec-prereq" title="行動 A">{ec.prereqA || '行動 A'}</div>
       </div>
       <div className="ec-center">
-        <div className="ec-box ec-goal" title="Goal">{ec.goal || 'Goal'}</div>
+        <div className="ec-box ec-goal" title="共同目標">{ec.goal || '共同目標'}</div>
         <div className="ec-conflict-arrow">
           <span>CONFLICT</span>
         </div>
       </div>
       <div className="ec-row ec-row-bottom">
-        <div className="ec-box ec-need" title="Need B">{ec.needB || 'Need B'}</div>
+        <div className="ec-box ec-need" title="需求 B">{ec.needB || '需求 B'}</div>
         <div className="ec-arrow">-&gt;</div>
-        <div className="ec-box ec-prereq" title="Prereq B">{ec.prereqB || 'Prereq B'}</div>
+        <div className="ec-box ec-prereq" title="行動 B">{ec.prereqB || '行動 B'}</div>
       </div>
     </div>
   );

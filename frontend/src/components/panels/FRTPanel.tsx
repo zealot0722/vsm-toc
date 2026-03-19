@@ -37,10 +37,10 @@ interface FRTNodeData extends Record<string, unknown> {
 function FRTNodeComponent({ data }: NodeProps<Node<FRTNodeData>>) {
   const colors = NODE_COLORS[data.tocNodeType] ?? NODE_COLORS.symptom;
   const typeLabels: Record<string, string> = {
-    symptom: 'Desired Effect',
-    'intermediate-cause': 'Intermediate',
-    'core-constraint': 'Core Change',
-    injection: 'Injection',
+    symptom: '期望效果（DE）',
+    'intermediate-cause': '中間效果',
+    'core-constraint': '根本性變革',
+    injection: '注入（Injection）',
   };
   const isInjection = data.tocNodeType === 'injection';
 
@@ -121,7 +121,7 @@ export function FRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: FRTPanelP
           id: `e${e.source_id}-${e.target_id}`,
           source: String(e.source_id),
           target: String(e.target_id),
-          label: isNegative ? 'Negative Branch' : e.assumption || undefined,
+          label: isNegative ? '負面分支' : e.assumption || undefined,
           style: isNegative
             ? { stroke: '#ff4444', strokeDasharray: '6 3' }
             : { stroke: '#309050' },
@@ -158,7 +158,7 @@ export function FRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: FRTPanelP
               ? { stroke: '#ff4444', strokeDasharray: '6 3' }
               : { stroke: '#309050' },
             animated: !isNegative,
-            label: isNegative ? 'Negative Branch' : undefined,
+            label: isNegative ? '負面分支' : undefined,
             markerEnd: { type: 'arrowclosed' as const, color: isNegative ? '#ff4444' : '#309050' },
           },
           eds,
@@ -183,15 +183,15 @@ export function FRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: FRTPanelP
     try {
       const aId = await ensureAnalysis();
       const labelMap: Record<string, string> = {
-        injection: 'New Injection',
-        symptom: 'Desired Effect',
-        'intermediate-cause': 'Intermediate Effect',
-        'core-constraint': 'Core Change',
+        injection: '新注入',
+        symptom: '期望效果',
+        'intermediate-cause': '中間效果',
+        'core-constraint': '根本性變革',
       };
       const result = await api.toc.nodes.create(aId, {
         analysis_id: aId,
         type: addingType,
-        label: labelMap[addingType] ?? 'New Node',
+        label: labelMap[addingType] ?? '新節點',
         x: 100 + Math.random() * 200,
         y: addingType === 'injection' ? 300 : addingType === 'symptom' ? 50 : 150 + Math.random() * 100,
       }) as TOCTreeNode;
@@ -209,10 +209,10 @@ export function FRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: FRTPanelP
   }, [addingType, setNodes, ensureAnalysis]);
 
   const typeButtons: { type: TOCNodeType; label: string; color: string }[] = [
-    { type: 'injection', label: 'Injection', color: '#309050' },
-    { type: 'symptom', label: 'Desired Effect', color: '#8b3030' },
-    { type: 'intermediate-cause', label: 'Intermediate', color: '#8b7a30' },
-    { type: 'core-constraint', label: 'Core Change', color: '#aa6020' },
+    { type: 'injection', label: '注入（Injection）', color: '#309050' },
+    { type: 'symptom', label: '期望效果（DE）', color: '#8b3030' },
+    { type: 'intermediate-cause', label: '中間效果', color: '#8b7a30' },
+    { type: 'core-constraint', label: '根本性變革', color: '#aa6020' },
   ];
 
   return (
@@ -233,20 +233,20 @@ export function FRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: FRTPanelP
         </div>
         <div className="tree-toolbar-row">
           <button className="tree-add-btn" onClick={addNode}>
-            + Add Node
+            + 新增節點
           </button>
           <button
             className={`tree-neg-btn ${negBranchMode ? 'active' : ''}`}
             onClick={() => setNegBranchMode((v) => !v)}
-            title="Toggle negative branch mode for new connections"
+            title="切換負面分支模式"
           >
-            {negBranchMode ? 'NEG Branch ON' : 'NEG Branch'}
+            {negBranchMode ? '負面分支 ●' : '負面分支'}
           </button>
         </div>
       </div>
 
       <div className="tree-hint">
-        Add injections (solutions) and connect to desired effects. Toggle "NEG Branch" to mark side-effect connections.
+        從注入（Injection）出發，驗證能否產生期望效果（DE）。開啟「負面分支」以標記可能的副作用連線。
       </div>
 
       <div className="tree-canvas">

@@ -6,7 +6,7 @@ import type { NodeType } from './types';
 import './App.css';
 
 export default function App() {
-  const [projectName, setProjectName] = useState('My VSM Project');
+  const [projectName, setProjectName] = useState('我的 VSM 專案');
   const [projectSaved, setProjectSaved] = useState(false);
 
   const handleAddNode = useCallback((type: NodeType) => {
