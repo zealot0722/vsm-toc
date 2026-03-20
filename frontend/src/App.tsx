@@ -127,6 +127,22 @@ export default function App() {
     setShowSettings(false);
   }, []);
 
+  const handleExportMarkdown = useCallback(() => {
+    const exportFn = (window as unknown as Record<string, unknown>).__vsmExportMarkdown;
+    if (typeof exportFn !== 'function') {
+      alert('無法取得畫布資料，請稍後再試');
+      return;
+    }
+    const markdown = (exportFn as () => string)();
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName || 'vsm-流程圖'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [projectName]);
+
   const handleAIAnalyze = useCallback(async () => {
     if (!apiConfig.apiKey) {
       setAnalysisError('請先在設定中填入 API Key');
@@ -169,6 +185,7 @@ export default function App() {
         projectSaved={projectSaved}
         onAIAnalyze={handleAIAnalyze}
         onOpenSettings={() => setShowSettings(true)}
+        onExportMarkdown={handleExportMarkdown}
       />
       <ReactFlowProvider>
         <VSMCanvas projectId={null} nodeIdMap={new Map()} />

@@ -17,9 +17,10 @@ interface ToolbarProps {
   projectSaved: boolean;
   onAIAnalyze: () => void;
   onOpenSettings: () => void;
+  onExportMarkdown: () => void;
 }
 
-export function Toolbar({ onAddNode, projectName, onProjectNameChange, onSaveProject, projectSaved, onAIAnalyze, onOpenSettings }: ToolbarProps) {
+export function Toolbar({ onAddNode, projectName, onProjectNameChange, onSaveProject, projectSaved, onAIAnalyze, onOpenSettings, onExportMarkdown }: ToolbarProps) {
   return (
     <div className="toolbar">
       <div className="toolbar-brand">
@@ -68,6 +69,13 @@ export function Toolbar({ onAddNode, projectName, onProjectNameChange, onSavePro
 
       <div className="toolbar-section">
         <span className="section-label">分析工具</span>
+        <button
+          className="toolbar-btn export-btn"
+          onClick={onExportMarkdown}
+          title="匯出為 Markdown 檔案（可貼入 Claude/ChatGPT 分析）"
+        >
+          📄 匯出 MD
+        </button>
         <button
           className="toolbar-btn ai-btn"
           onClick={onAIAnalyze}
