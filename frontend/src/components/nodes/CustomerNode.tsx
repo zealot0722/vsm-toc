@@ -9,6 +9,7 @@ export function CustomerNode({ data, selected }: NodeProps) {
       <div className="node-icon">👤</div>
       <div className="node-label">{d.label}</div>
       <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
     </div>
   );
 }

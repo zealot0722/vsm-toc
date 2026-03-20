@@ -313,12 +313,14 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
         defaultEdgeOptions={{ type: 'smoothstep' }}
         style={{ background: '#1a1a2e' }}
         deleteKeyCode={['Backspace', 'Delete']}
-        panOnDrag={[1, 2]}
+        nodesDraggable
+        panOnDrag={[2]}
         selectionOnDrag
         selectionMode={SelectionMode.Partial}
         zoomOnScroll
         zoomOnPinch
         panOnScroll={false}
+        connectOnClick={true}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e2d4d" />
         <Controls
