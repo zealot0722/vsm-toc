@@ -15,9 +15,11 @@ interface ToolbarProps {
   onProjectNameChange: (name: string) => void;
   onSaveProject: () => void;
   projectSaved: boolean;
+  onAIAnalyze: () => void;
+  onOpenSettings: () => void;
 }
 
-export function Toolbar({ onAddNode, projectName, onProjectNameChange, onSaveProject, projectSaved }: ToolbarProps) {
+export function Toolbar({ onAddNode, projectName, onProjectNameChange, onSaveProject, projectSaved, onAIAnalyze, onOpenSettings }: ToolbarProps) {
   return (
     <div className="toolbar">
       <div className="toolbar-brand">
@@ -65,11 +67,37 @@ export function Toolbar({ onAddNode, projectName, onProjectNameChange, onSavePro
       <div className="toolbar-divider" />
 
       <div className="toolbar-section">
-        <span className="section-label">提示</span>
+        <span className="section-label">分析工具</span>
+        <button
+          className="toolbar-btn ai-btn"
+          onClick={onAIAnalyze}
+          title="使用 AI 分析 VSM 流程"
+        >
+          🤖 AI 分析
+        </button>
+        <button
+          className="toolbar-btn settings-btn"
+          onClick={onOpenSettings}
+          title="API 設定"
+        >
+          ⚙ 設定
+        </button>
+      </div>
+
+      <div className="toolbar-divider" />
+
+      <div className="toolbar-section">
+        <span className="section-label">操作提示</span>
         <div className="hint-text">
           <span className="hint-badge bottleneck">⚠</span> 自動偵測制約站（最高 C/T）
           <br />
           點擊制約站節點進行 TOC 分析
+          <br />
+          左鍵拖曳空白處可框選多個節點
+          <br />
+          中鍵／右鍵拖曳可平移畫布
+          <br />
+          右鍵點擊連線可刪除連線
         </div>
       </div>
     </div>

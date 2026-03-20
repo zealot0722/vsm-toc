@@ -162,3 +162,27 @@
   background: rgba(255, 107, 107, 0.2);
   color: #ff6b6b;
 }
+
+/* ── AI / Settings buttons ─────────────────────────────────────────────────── */
+
+.toolbar-btn.ai-btn {
+  background: #2d1a5a;
+  border-color: #5a3d7a;
+  color: #c0a0e8;
+}
+
+.toolbar-btn.ai-btn:hover {
+  background: #3d2a6a;
+  color: #d8c0f8;
+}
+
+.toolbar-btn.settings-btn {
+  background: #1a2a3a;
+  border-color: #2d4a5a;
+  color: #8aadd8;
+}
+
+.toolbar-btn.settings-btn:hover {
+  background: #2a3a4a;
+  color: #b0ccf0;
+}

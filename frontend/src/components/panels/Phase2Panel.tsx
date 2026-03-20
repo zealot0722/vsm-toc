@@ -1,13 +1,62 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
-import type { ConstraintScore, Hypothesis, Mechanism, Phase2Tab } from '../../types';
+import type { ConstraintScore, Hypothesis, Mechanism, Phase2Tab, VSMNodeData } from '../../types';
 import './Phase2Panel.css';
+
+// ── Types for canvas nodes (minimal subset) ───────────────────────────────────
+interface CanvasNode {
+  id: string;
+  type?: string;
+  data: VSMNodeData;
+}
 
 interface Phase2PanelProps {
   projectId: number | null;
+  nodes: CanvasNode[];
   onClose: () => void;
 }
 
+// ── Local storage helpers ─────────────────────────────────────────────────────
+const HYPS_KEY = 'vsm_hypotheses';
+const MECHS_KEY = 'vsm_mechanisms';
+
+function loadLocal<T>(key: string): T[] {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); }
+  catch { return []; }
+}
+
+function saveLocal<T>(key: string, data: T[]) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+// ── Local constraint score calculation ────────────────────────────────────────
+function computeLocalScores(nodes: CanvasNode[]): ConstraintScore[] {
+  const processNodes = nodes.filter(n => n.type === 'process' && n.data.properties);
+  if (processNodes.length === 0) return [];
+
+  const avgCT = processNodes.reduce((sum, n) => sum + (n.data.properties?.cycleTime ?? 0), 0) / processNodes.length;
+
+  return processNodes.map(n => {
+    const props = n.data.properties!;
+    const load_ratio = avgCT > 0 ? props.cycleTime / avgCT : 0;
+    const backlog = props.wip / 20;
+    const escalation = (100 - props.uptime) / 50;
+    const quality_gap = (100 - props.uptime) / 100;
+    const dependency_risk = (props.wip * props.cycleTime) / 2000;
+
+    const scores = { load_ratio, backlog, escalation, quality_gap, dependency_risk };
+    const total = Object.values(scores).reduce((a, b) => a + b, 0);
+
+    return {
+      node_id: Number(n.id),
+      label: n.data.label,
+      scores,
+      total,
+    };
+  });
+}
+
+// ── Status / Health colors ────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
   draft: '#c8b472',
   running: '#7ab8f5',
@@ -21,7 +70,8 @@ const HEALTH_COLORS: Record<string, string> = {
   stopped: '#ff6b6b',
 };
 
-export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
+// ── Component ─────────────────────────────────────────────────────────────────
+export function Phase2Panel({ projectId, nodes, onClose }: Phase2PanelProps) {
   const [tab, setTab] = useState<Phase2Tab>('constraint');
   const [scores, setScores] = useState<ConstraintScore[]>([]);
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
@@ -29,55 +79,123 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
   const [editingHyp, setEditingHyp] = useState<Partial<Hypothesis> | null>(null);
   const [editingMech, setEditingMech] = useState<Partial<Mechanism> | null>(null);
 
-  const load = useCallback(async () => {
-    if (!projectId) return;
-    try {
-      if (tab === 'constraint') {
-        const data = await api.constraintScores.get(projectId) as ConstraintScore[];
-        setScores(data);
-      } else if (tab === 'hypothesis') {
-        const data = await api.hypotheses.list(projectId) as Hypothesis[];
-        setHypotheses(data);
+  const load = useCallback(() => {
+    if (tab === 'constraint') {
+      if (projectId) {
+        api.constraintScores.get(projectId)
+          .then(data => setScores(data as ConstraintScore[]))
+          .catch(() => {});
       } else {
-        const data = await api.mechanisms.list(projectId) as Mechanism[];
-        setMechanisms(data);
+        setScores(computeLocalScores(nodes));
       }
-    } catch { /* ignore on load */ }
-  }, [projectId, tab]);
+    } else if (tab === 'hypothesis') {
+      if (projectId) {
+        api.hypotheses.list(projectId)
+          .then(data => setHypotheses(data as Hypothesis[]))
+          .catch(() => {});
+      } else {
+        setHypotheses(loadLocal<Hypothesis>(HYPS_KEY));
+      }
+    } else {
+      if (projectId) {
+        api.mechanisms.list(projectId)
+          .then(data => setMechanisms(data as Mechanism[]))
+          .catch(() => {});
+      } else {
+        setMechanisms(loadLocal<Mechanism>(MECHS_KEY));
+      }
+    }
+  }, [projectId, tab, nodes]);
 
   useEffect(() => { load(); }, [load]);
 
   // ── Hypothesis CRUD ────────────────────────────────────────────────────────
   const saveHypothesis = async () => {
-    if (!projectId || !editingHyp?.title) return;
-    if (editingHyp.id) {
-      await api.hypotheses.update(editingHyp.id, editingHyp);
+    if (!editingHyp?.title) return;
+
+    if (projectId) {
+      if (editingHyp.id) {
+        await api.hypotheses.update(editingHyp.id, editingHyp);
+      } else {
+        await api.hypotheses.create(projectId, editingHyp);
+      }
     } else {
-      await api.hypotheses.create(projectId, editingHyp);
+      const items = loadLocal<Hypothesis>(HYPS_KEY);
+      if (editingHyp.id) {
+        const idx = items.findIndex(h => h.id === editingHyp.id);
+        if (idx >= 0) items[idx] = { ...items[idx], ...editingHyp } as Hypothesis;
+      } else {
+        items.push({
+          ...editingHyp,
+          id: Date.now(),
+          project_id: 0,
+          suspected_constraint: editingHyp.suspected_constraint ?? '',
+          expected_effect: editingHyp.expected_effect ?? '',
+          validation_metrics: editingHyp.validation_metrics ?? '',
+          observation_window: editingHyp.observation_window ?? '14 天',
+          status: editingHyp.status ?? 'draft',
+          created_at: new Date().toISOString(),
+        } as Hypothesis);
+      }
+      saveLocal(HYPS_KEY, items);
     }
+
     setEditingHyp(null);
     load();
   };
 
   const deleteHypothesis = async (id: number) => {
-    await api.hypotheses.delete(id);
+    if (projectId) {
+      await api.hypotheses.delete(id);
+    } else {
+      const items = loadLocal<Hypothesis>(HYPS_KEY).filter(h => h.id !== id);
+      saveLocal(HYPS_KEY, items);
+    }
     load();
   };
 
   // ── Mechanism CRUD ─────────────────────────────────────────────────────────
   const saveMechanism = async () => {
-    if (!projectId || !editingMech?.title) return;
-    if (editingMech.id) {
-      await api.mechanisms.update(editingMech.id, editingMech);
+    if (!editingMech?.title) return;
+
+    if (projectId) {
+      if (editingMech.id) {
+        await api.mechanisms.update(editingMech.id, editingMech);
+      } else {
+        await api.mechanisms.create(projectId, editingMech);
+      }
     } else {
-      await api.mechanisms.create(projectId, editingMech);
+      const items = loadLocal<Mechanism>(MECHS_KEY);
+      if (editingMech.id) {
+        const idx = items.findIndex(m => m.id === editingMech.id);
+        if (idx >= 0) items[idx] = { ...items[idx], ...editingMech } as Mechanism;
+      } else {
+        items.push({
+          ...editingMech,
+          id: Date.now(),
+          project_id: 0,
+          linked_toc_node_id: null,
+          trigger: editingMech.trigger ?? '',
+          actor: editingMech.actor ?? '',
+          frequency: editingMech.frequency ?? '',
+          health_status: editingMech.health_status ?? 'normal',
+          created_at: new Date().toISOString(),
+        } as Mechanism);
+      }
+      saveLocal(MECHS_KEY, items);
     }
+
     setEditingMech(null);
     load();
   };
 
   const deleteMechanism = async (id: number) => {
-    await api.mechanisms.delete(id);
+    if (projectId) {
+      await api.mechanisms.delete(id);
+    } else {
+      const items = loadLocal<Mechanism>(MECHS_KEY).filter(m => m.id !== id);
+      saveLocal(MECHS_KEY, items);
+    }
     load();
   };
 
@@ -115,8 +233,10 @@ export function Phase2Panel({ projectId, onClose }: Phase2PanelProps) {
         {/* ── Constraint Score Tab ─────────────────────────────────────────── */}
         {tab === 'constraint' && (
           <div className="p2-scores">
-            {!projectId && <div className="p2-empty">請先儲存專案以計算制約評估分數</div>}
-            {projectId && scores.length === 0 && <div className="p2-empty">尚無製程站資料</div>}
+            {scores.length === 0 && <div className="p2-empty">尚無製程站資料</div>}
+            {!projectId && scores.length > 0 && (
+              <div className="p2-local-hint">本機模式：依據畫布節點資料即時計算</div>
+            )}
             {scores.map((s) => (
               <div key={s.node_id} className="score-card">
                 <div className="score-header">

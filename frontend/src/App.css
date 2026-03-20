@@ -5,3 +5,79 @@
   overflow: hidden;
   background: #1a1a2e;
 }
+
+/* ── Settings Modal ────────────────────────────────────────────────────────── */
+
+.settings-modal {
+  width: 380px;
+}
+
+.settings-select {
+  background: #0a1520;
+  border: 1px solid #1e2d4d;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  color: #c0cce8;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.settings-select:focus {
+  border-color: #2d5aaa;
+}
+
+.settings-hint {
+  font-size: 11px;
+  color: #c8b472;
+  background: rgba(200, 180, 114, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+/* ── Analysis Modal ────────────────────────────────────────────────────────── */
+
+.analysis-modal {
+  width: 600px;
+  max-width: 90vw;
+}
+
+.analysis-body {
+  max-height: 60vh;
+}
+
+.analysis-loading {
+  text-align: center;
+  color: #7ab8f5;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+.analysis-error {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.analysis-result {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #c0cce8;
+  line-height: 1.7;
+  margin: 0;
+  background: none;
+}
+
+.analysis-empty {
+  text-align: center;
+  color: #3a5070;
+  padding: 40px 0;
+}

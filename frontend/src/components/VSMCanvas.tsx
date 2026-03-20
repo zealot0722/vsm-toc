@@ -13,6 +13,7 @@ import {
   type NodeTypes,
   BackgroundVariant,
   Panel,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -97,6 +98,69 @@ function detectBottleneck(nodes: FlowNode[]): string | null {
   return bottleneckId;
 }
 
+// ── Export to Markdown (for AI analysis) ──────────────────────────────────────
+export function exportToMarkdown(nodes: FlowNode[], edges: Edge[]): string {
+  const bottleneckId = detectBottleneck(nodes);
+  const typeLabels: Record<string, string> = {
+    supplier: '供應商', process: '製程站', inventory: '在製品庫存',
+    customer: '客戶', infoflow: '資訊流',
+  };
+
+  let md = '# VSM 流程圖分析\n\n';
+  md += '## 製程節點\n';
+  md += '| 節點 | 類型 | C/T(s) | 稼動率(%) | 人數 | WIP | 制約站 |\n';
+  md += '|------|------|--------|-----------|------|-----|--------|\n';
+  for (const n of nodes) {
+    const props = n.data.properties;
+    const type = typeLabels[n.type ?? ''] ?? n.type ?? '';
+    const ct = props?.cycleTime ?? '—';
+    const uptime = props?.uptime ?? '—';
+    const workers = props?.workers ?? '—';
+    const wip = props?.wip ?? '—';
+    const isBn = n.id === bottleneckId ? '是' : '否';
+    md += `| ${n.data.label} | ${type} | ${ct} | ${uptime} | ${workers} | ${wip} | ${isBn} |\n`;
+  }
+
+  md += '\n## 連線關係\n';
+  for (const e of edges) {
+    const src = nodes.find(n => n.id === e.source);
+    const tgt = nodes.find(n => n.id === e.target);
+    if (src && tgt) md += `- ${src.data.label} → ${tgt.data.label}\n`;
+  }
+
+  let valueAddedTime = 0;
+  let wipDelay = 0;
+  for (const n of nodes) {
+    const props = n.data.properties;
+    if (!props) continue;
+    if (n.type === 'process') {
+      valueAddedTime += props.cycleTime;
+      wipDelay += props.wip;
+    } else if (n.type === 'inventory') {
+      wipDelay += props.wip;
+    }
+  }
+  const totalLeadTime = valueAddedTime + wipDelay;
+  const efficiency = totalLeadTime > 0 ? (valueAddedTime / totalLeadTime) * 100 : 0;
+
+  md += '\n## 效率指標\n';
+  md += `- 總前置時間：${totalLeadTime}s\n`;
+  md += `- 增值時間：${valueAddedTime}s\n`;
+  md += `- 流程效率（PCE）：${efficiency.toFixed(1)}%\n`;
+
+  if (bottleneckId) {
+    const bn = nodes.find(n => n.id === bottleneckId);
+    if (bn?.data.properties) {
+      md += '\n## TOC 識別\n';
+      md += `- 制約站：${bn.data.label}（C/T 最高：${bn.data.properties.cycleTime}s）\n`;
+    }
+  }
+
+  return md;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 interface VSMCanvasProps {
   projectId: number | null;
   nodeIdMap: Map<string, number>;
@@ -112,6 +176,9 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
   const [editingNode, setEditingNode] = useState<FlowNode | null>(null);
   const [nodeMetrics, setNodeMetrics] = useState<NodeMetric[]>([]);
   const nodeCounter = useRef(INITIAL_NODES.length + 1);
+
+  // Edge context menu
+  const [edgeMenu, setEdgeMenu] = useState<{ edgeId: string; x: number; y: number } | null>(null);
 
   // Load node metrics when project is available
   useEffect(() => {
@@ -135,6 +202,7 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     const n = node as FlowNode;
+    setEdgeMenu(null);
     if (n.data.isBottleneck) {
       setSelectedBottleneckNode(n);
       setShowTOC(true);
@@ -143,6 +211,19 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
     }
   }, []);
 
+  // ── Edge context menu handlers ──────────────────────────────────────────────
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setEdgeMenu({ edgeId: edge.id, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const deleteEdge = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+    setEdgeMenu(null);
+  }, [setEdges]);
+
+  // ── Add node ────────────────────────────────────────────────────────────────
   const addNode = useCallback((type: NodeType) => {
     const id = String(++nodeCounter.current);
     const defaults: Record<NodeType, Partial<VSMNodeData>> = {
@@ -159,7 +240,6 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
     };
     setNodes((nds) => [...nds, newNode]);
 
-    // Auto-create default metrics for process nodes
     if (type === 'process' && projectId) {
       const defaultMetrics = [
         { node_id: Number(id), metric_name: 'cycle_time', unit: 'min', current_value: 30, target_value: 20, source_type: 'estimated' },
@@ -176,7 +256,12 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
     (window as unknown as Record<string, unknown>).__vsmAddNode = addNode;
   }, [addNode]);
 
-  // ── Lead Time Calculations ──────────────────────────────────────────────
+  // Expose exportToMarkdown for AI analysis
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__vsmExportMarkdown = () => exportToMarkdown(nodes, edges);
+  }, [nodes, edges]);
+
+  // ── Lead Time Calculations ──────────────────────────────────────────────────
   const leadTimeMetrics = useMemo(() => {
     let valueAddedTime = 0;
     let wipDelay = 0;
@@ -201,7 +286,6 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
     return { totalLeadTime, valueAddedTime, efficiency };
   }, [nodes]);
 
-  // Get metrics for a specific node (by flow ID matching)
   const getNodeMetrics = useCallback((nodeId: string) => {
     return nodeMetrics.filter(m => String(m.node_id) === nodeId);
   }, [nodeMetrics]);
@@ -209,7 +293,11 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
   const rightPanelOpen = showTOC || showPhase2 || showBeforeAfter;
 
   return (
-    <div className="vsm-canvas-wrapper">
+    <div
+      className="vsm-canvas-wrapper"
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={() => setEdgeMenu(null)}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -217,15 +305,26 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneClick={() => setEdgeMenu(null)}
         nodeTypes={NODE_TYPES}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         defaultEdgeOptions={{ type: 'smoothstep' }}
         style={{ background: '#1a1a2e' }}
         deleteKeyCode={['Backspace', 'Delete']}
+        panOnDrag={[1, 2]}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        zoomOnScroll
+        zoomOnPinch
+        panOnScroll={false}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e2d4d" />
-        <Controls style={{ background: '#0d1225', border: '1px solid #1e2d4d', borderRadius: '8px' }} />
+        <Controls
+          showInteractive={false}
+          style={{ background: '#0d1225', border: '1px solid #1e2d4d', borderRadius: '8px' }}
+        />
         <MiniMap
           style={{ background: '#0d1225', border: '1px solid #1e2d4d', borderRadius: '8px' }}
           nodeColor={(n) => {
@@ -249,9 +348,9 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
             <button
               className={`stat-toggle ${showPhase2 ? 'active' : ''}`}
               onClick={() => { setShowPhase2(!showPhase2); setShowTOC(false); setShowBeforeAfter(false); }}
-              title="第二階段分析"
+              title="深度分析"
             >
-              P2
+              深度分析
             </button>
             <button
               className={`stat-toggle ${showBeforeAfter ? 'active' : ''}`}
@@ -283,6 +382,17 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
         </div>
       </div>
 
+      {/* ── Edge Context Menu ──────────────────────────────────────────────── */}
+      {edgeMenu && (
+        <div
+          className="edge-context-menu"
+          style={{ position: 'fixed', left: edgeMenu.x, top: edgeMenu.y, zIndex: 300 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={() => deleteEdge(edgeMenu.edgeId)}>🗑 刪除連線</button>
+        </div>
+      )}
+
       {showTOC && selectedBottleneckNode && (
         <TOCPanel
           node={selectedBottleneckNode}
@@ -294,6 +404,7 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
       {showPhase2 && (
         <Phase2Panel
           projectId={projectId}
+          nodes={nodes}
           onClose={() => setShowPhase2(false)}
         />
       )}
@@ -319,6 +430,8 @@ export function VSMCanvas({ projectId, nodeIdMap: _nodeIdMap }: VSMCanvasProps) 
     </div>
   );
 }
+
+// ── Node Edit Modal ───────────────────────────────────────────────────────────
 
 interface NodeEditModalProps {
   node: FlowNode;

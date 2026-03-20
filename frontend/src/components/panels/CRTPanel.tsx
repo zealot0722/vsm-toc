@@ -134,7 +134,7 @@ interface CRTPanelProps {
 
 export function CRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: CRTPanelProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CRTNodeData>>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [addingType, setAddingType] = useState<TOCNodeType>('symptom');
   const nodeCounter = useRef(0);
   const currentAnalysisId = useRef<number | null>(analysisId);

@@ -91,7 +91,7 @@ interface FRTPanelProps {
 
 export function FRTPanel({ analysisId, vsmNodeId, onAnalysisCreated }: FRTPanelProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FRTNodeData>>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [addingType, setAddingType] = useState<TOCNodeType>('injection');
   const [negBranchMode, setNegBranchMode] = useState(false);
   const nodeCounter = useRef(0);

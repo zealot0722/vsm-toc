@@ -136,3 +136,10 @@ export interface ConstraintScore {
 }
 
 export type Phase2Tab = 'constraint' | 'hypothesis' | 'mechanism';
+
+export interface APIConfig {
+  provider: 'openai' | 'claude' | 'custom';
+  apiKey: string;
+  endpoint?: string;
+  model?: string;
+}

@@ -344,3 +344,34 @@
   color: #ff6b6b;
   background: rgba(255, 107, 107, 0.1);
 }
+
+/* ── Edge Context Menu ─────────────────────────────────────────────────────── */
+
+.edge-context-menu {
+  background: #0f1628;
+  border: 1px solid #2d4a7a;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  overflow: hidden;
+  min-width: 140px;
+  animation: scale-in 0.12s ease;
+}
+
+.edge-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 14px;
+  background: transparent;
+  border: none;
+  color: #c0cce8;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.edge-context-menu button:hover {
+  background: #1e2d4d;
+  color: #ff6b6b;
+}
