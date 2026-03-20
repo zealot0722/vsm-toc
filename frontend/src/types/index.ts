@@ -8,11 +8,15 @@ export interface ProcessProperties extends Record<string, unknown> {
   wip: number;
 }
 
+export type ConstraintCause = 'capacity' | 'policy' | 'skill' | 'dependency' | 'demand_variation';
+
 export interface VSMNodeData extends Record<string, unknown> {
   label: string;
   nodeType: NodeType;
   isBottleneck?: boolean;
   properties?: ProcessProperties;
+  notes?: string;
+  constraintCause?: ConstraintCause;
 }
 
 export interface ECAnalysis {

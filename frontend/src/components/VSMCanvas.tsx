@@ -25,7 +25,7 @@ import { InfoFlowNode }  from './nodes/InfoFlowNode';
 import { TOCPanel }      from './panels/TOCPanel';
 import { Phase2Panel }   from './panels/Phase2Panel';
 import { BeforeAfterPanel } from './panels/BeforeAfterPanel';
-import type { NodeType, VSMNodeData, ProcessProperties, NodeMetric } from '../types';
+import type { NodeType, VSMNodeData, ProcessProperties, NodeMetric, ConstraintCause } from '../types';
 import { api } from '../api/client';
 import './VSMCanvas.css';
 
@@ -99,6 +99,14 @@ function detectBottleneck(nodes: FlowNode[]): string | null {
 }
 
 // ── Export to Markdown (for AI analysis) ──────────────────────────────────────
+const CONSTRAINT_CAUSE_FULL_LABELS: Record<string, string> = {
+  capacity: '人力/產能不足',
+  policy: '政策/審批限制',
+  skill: '技能/知識瓶頸',
+  dependency: '外部依賴',
+  demand_variation: '需求波動太大',
+};
+
 export function exportToMarkdown(nodes: FlowNode[], edges: Edge[]): string {
   const bottleneckId = detectBottleneck(nodes);
   const typeLabels: Record<string, string> = {
@@ -108,8 +116,8 @@ export function exportToMarkdown(nodes: FlowNode[], edges: Edge[]): string {
 
   let md = '# VSM 流程圖分析\n\n';
   md += '## 製程節點\n';
-  md += '| 節點 | 類型 | C/T(s) | 稼動率(%) | 人數 | WIP | 制約站 |\n';
-  md += '|------|------|--------|-----------|------|-----|--------|\n';
+  md += '| 節點 | 類型 | C/T(s) | 稼動率(%) | 人數 | WIP | 制約站 | 制約原因 |\n';
+  md += '|------|------|--------|-----------|------|-----|--------|----------|\n';
   for (const n of nodes) {
     const props = n.data.properties;
     const type = typeLabels[n.type ?? ''] ?? n.type ?? '';
@@ -117,8 +125,9 @@ export function exportToMarkdown(nodes: FlowNode[], edges: Edge[]): string {
     const uptime = props?.uptime ?? '—';
     const workers = props?.workers ?? '—';
     const wip = props?.wip ?? '—';
-    const isBn = n.id === bottleneckId ? '是' : '否';
-    md += `| ${n.data.label} | ${type} | ${ct} | ${uptime} | ${workers} | ${wip} | ${isBn} |\n`;
+    const isBn = n.id === bottleneckId ? '✅ 是' : '否';
+    const cause = n.data.constraintCause ? CONSTRAINT_CAUSE_FULL_LABELS[n.data.constraintCause] ?? '' : '';
+    md += `| ${n.data.label} | ${type} | ${ct} | ${uptime} | ${workers} | ${wip} | ${isBn} | ${cause} |\n`;
   }
 
   md += '\n## 連線關係\n';
@@ -153,6 +162,15 @@ export function exportToMarkdown(nodes: FlowNode[], edges: Edge[]): string {
     if (bn?.data.properties) {
       md += '\n## TOC 識別\n';
       md += `- 制約站：${bn.data.label}（C/T 最高：${bn.data.properties.cycleTime}s）\n`;
+    }
+  }
+
+  const notesNodes = nodes.filter(n => n.data.notes);
+  if (notesNodes.length > 0) {
+    md += '\n## 節點備註\n';
+    for (const n of notesNodes) {
+      md += `### ${n.data.label}\n`;
+      md += `> ${n.data.notes}\n\n`;
     }
   }
 
@@ -447,6 +465,8 @@ function NodeEditModal({ node, metrics, onSave, onClose }: NodeEditModalProps) {
   const [props, setProps] = useState<ProcessProperties>(
     node.data.properties ?? { cycleTime: 30, uptime: 90, shifts: 1, workers: 2, wip: 10 }
   );
+  const [notes, setNotes] = useState(node.data.notes ?? '');
+  const [constraintCause, setConstraintCause] = useState<ConstraintCause | ''>(node.data.constraintCause ?? '');
 
   const setProp = (key: keyof ProcessProperties, val: string) =>
     setProps((p) => ({ ...p, [key]: Number(val) }));
@@ -509,12 +529,37 @@ function NodeEditModal({ node, metrics, onSave, onClose }: NodeEditModalProps) {
               })}
             </>
           )}
+
+          <div className="modal-metrics-divider" />
+          <div className="form-group">
+            <label>制約原因（若此站為制約）</label>
+            <select
+              value={constraintCause}
+              onChange={(e) => setConstraintCause(e.target.value as ConstraintCause | '')}
+            >
+              <option value="">— 未指定 —</option>
+              <option value="capacity">人力/產能不足</option>
+              <option value="policy">政策/審批限制</option>
+              <option value="skill">技能/知識瓶頸</option>
+              <option value="dependency">外部依賴（等人/等料/等系統）</option>
+              <option value="demand_variation">需求波動太大</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>備註（變異性、例外情況、補充說明）</label>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="例：偶爾遇到特殊規格會花 3 倍時間（約 10% 情況）。旺季人力只有平時的 60%。"
+            />
+          </div>
         </div>
         <div className="modal-actions">
           <button className="modal-btn cancel" onClick={onClose}>取消</button>
           <button
             className="modal-btn save"
-            onClick={() => onSave({ ...node, data: { ...node.data, label, properties: props } })}
+            onClick={() => onSave({ ...node, data: { ...node.data, label, properties: props, notes: notes || undefined, constraintCause: constraintCause || undefined } })}
           >
             更新
           </button>

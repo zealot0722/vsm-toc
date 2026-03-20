@@ -1,6 +1,14 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { VSMNodeData } from '../../types';
+import type { VSMNodeData, ConstraintCause } from '../../types';
 import './nodes.css';
+
+const CONSTRAINT_CAUSE_LABELS: Record<ConstraintCause, string> = {
+  capacity: '產能',
+  policy: '政策',
+  skill: '技能',
+  dependency: '依賴',
+  demand_variation: '波動',
+};
 
 export function ProcessNode({ data, selected }: NodeProps) {
   const d = data as unknown as VSMNodeData;
@@ -9,7 +17,14 @@ export function ProcessNode({ data, selected }: NodeProps) {
     <div
       className={`vsm-node process-node ${selected ? 'selected' : ''} ${d.isBottleneck ? 'bottleneck' : ''}`}
     >
-      {d.isBottleneck && <div className="bottleneck-badge">⚠ 制約站</div>}
+      {d.isBottleneck && (
+        <div className="bottleneck-badge">
+          ⚠ 制約站
+          {d.constraintCause && (
+            <span className="constraint-cause-tag">{CONSTRAINT_CAUSE_LABELS[d.constraintCause]}</span>
+          )}
+        </div>
+      )}
       <div className="node-label">{d.label}</div>
       {p && (
         <div className="node-props">
@@ -20,6 +35,7 @@ export function ProcessNode({ data, selected }: NodeProps) {
           <div className="prop-row"><span>在製品</span><span>{p.wip}</span></div>
         </div>
       )}
+      {d.notes && <div className="node-notes-icon" title={d.notes}>📝</div>}
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
     </div>
